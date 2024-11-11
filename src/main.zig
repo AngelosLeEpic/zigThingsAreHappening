@@ -5,8 +5,30 @@ const rand = std.Random;
 const dist = @import("distributions.zig");
 const global = @import("global.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
+const os = std.os;
 pub fn main() !void {
-    try Test_Poisson();
+    //const print = std.debug.print;
+
+    //var args = std.process.args();
+
+    //args.skip(); // skip the programme name argument, we don't care about it
+
+    const stdout = std.io.getStdOut().writer();
+    const args = try std.process.argsAlloc(std.heap.page_allocator);
+
+    for (args, 0..) |arg, i| {
+        try stdout.print("arg {}: {s}\n", .{ i, arg });
+    }
+
+    //print("{i}\n", argv);
+    //print("string: {s}", argc[0]);
+
+    //if (argc. <= 3) {
+    //    print("You must input a valid test for me to run, please select:\n", null);
+    //    print("testPoisson, seed, TestAmount\n", null);
+    //    print("testNormal, seed, TestAmount\n", null);
+    //    print("testQ1, seed, TestAmount, TestDensity\n", null);
+    //}
 }
 
 fn Test_GetRandFromNormalDistribution() !void {
