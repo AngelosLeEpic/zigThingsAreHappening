@@ -1,9 +1,42 @@
 const std = @import("std");
 const math = std.math;
+const rand = std.Random;
 
 const global = @import("global.zig"); 
 
-pub fn GetRandFromNormalDistribution(p: global.Point, mean: f64, stdDev: f64) global.Point {
+pub fn GetRandFromNormalDistributionSingle(mean: f64, stdDev: f64, seed: c_int) f64 {
+    var rng = rand.DefaultPrng.init(seed);
+    var rando = rng.random();
+
+    var p = global.Point{ .x = rando.floatNorm(f64), .y = rando.floatNorm(f64) };
+
+    const N = 4;
+    for (0..N) |_| {            
+        p = GetRandPointFromNormalDistribution(p, mean, stdDev);    
+    }
+ 
+    return p.x;
+}
+
+pub fn GetRandsFromNormalDistribution(N: c_int, mean: f64, stdDev: f64, seed: c_int) std.ArrayList(f64) {
+    var rng = rand.DefaultPrng.init(seed);
+    var rando = rng.random();
+
+    var p = global.Point{ .x = rando.floatNorm(f64), .y = rando.floatNorm(f64) };
+
+    var result: std.ArrayList(f64) = std.ArrayList(f64).init(std.testing.allocator);
+
+    const Ndiv2 = N / 2;
+    for (0..Ndiv2) |_| {            
+        p = GetRandPointFromNormalDistribution(p, mean, stdDev);    
+        result.append(p.x);
+        result.append(p.y);
+    }
+ 
+    return result;
+}
+
+pub fn GetRandPointFromNormalDistribution(p: global.Point, mean: f64, stdDev: f64) global.Point {
     const xI = math.floor(p.x);
     const yI = math.floor(p.x);
 

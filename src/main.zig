@@ -25,7 +25,7 @@ fn Test_GetRandFromNormalDistribution() !void {
         if (global.DEBUG_PRINT)
             std.debug.print("px={}, py={}\n", .{ p.x, p.y });
     
-        p = dist.GetRandFromNormalDistribution(p, 0, 1);
+        p = dist.GetRandPointFromNormalDistribution(p, 0, 1);
 
         try writer.print("{d}, {d}\n", .{ p.x, p.y });
         //try writer.print("{d}, {d}\n", .{ i, p.x });
