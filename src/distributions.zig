@@ -36,14 +36,14 @@ pub fn GetRandsFromNormalDistribution(N: c_int, mean: f64, stdDev: f64, seed: c_
     return result;
 }
 
+// https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
 pub fn GetRandPointFromNormalDistribution(p: global.Point, mean: f64, stdDev: f64) global.Point {
     const xI = math.floor(p.x);
     const yI = math.floor(p.x);
 
     const x: f64 = p.x - xI;
     const y: f64 = p.y - yI;
-
-    // https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
+    
     const logVal = math.log(f64, 10, x);
     const mag = stdDev * math.sqrt(-2 * logVal);
     const z0 = mag * math.cos(math.tau * y);
@@ -56,4 +56,14 @@ pub fn GetRandPointFromNormalDistribution(p: global.Point, mean: f64, stdDev: f6
         .x = z0 + mean,
         .y = z1 + mean,
     };
+}
+
+pub fn GetRandFromPoissonDistribution(lambda: f64, seed: c_int) f64 {
+    var rng = rand.DefaultPrng.init(seed);
+    var rando = rng.random();
+    return -math.log(f64, 10, rando.float(f64)) / lambda;
+}
+
+pub fn ConvertRandToPoissonDistribution(lambda: f64, randVal: f64) f64 {
+    return -math.log(f64, 10, randVal) / lambda;
 }
