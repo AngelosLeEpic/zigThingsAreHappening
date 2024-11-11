@@ -1,3 +1,3 @@
-const DEBUG_PRINT: bool = false;
+pub const DEBUG_PRINT: bool = false;
 
-const Point = struct { x: f64, y: f64 };
+pub const Point = struct { x: f64, y: f64 };
