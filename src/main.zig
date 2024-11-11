@@ -106,6 +106,24 @@ fn Test_Q1(seed: f64, MAX_RUNS: c_int, MCS_SIZE: c_int) !void {
     // but if I keep it all in one file, how will I sort this to seperate each run of the simulation?
     // TODO
 
+    const currentWD = std.fs.cwd();
+
+    
+
+    const result = simulateQ1(MAX_RUNS, StdDev, )
+
+    for (0..MAX_RUNS) |i| {
+        const file = try currentWD.createFile("Data/Q1MCS/" ++ i.toString() ++ "_simulation.csv", .{ .truncate = true });
+        const writer = file.writer();
+
+
+
+        for (data) |value| {
+            try writer.print("{}, ", .{value}); // Writing each value followed by a comma
+        }
+
+        try writer.print("{}", .{});
+    }
 }
 
 fn Test_Poisson() !void {
