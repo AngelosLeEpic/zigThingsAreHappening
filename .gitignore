@@ -1,0 +1,23 @@
+# Zig build artifacts
+.zig-cache/
+zig-out/
+
+# System-specific files
+.DS_Store
+Thumbs.db
+
+# IDE or editor-specific files
+.vscode/
+.idea/
+*.swp
+*~ 
+
+# User-specific files
+*.log
+*.bak
+*.tmp
+
+# Compiler-specific files (if any)
+*.zig.o
+*.zig.obj
+*.a
