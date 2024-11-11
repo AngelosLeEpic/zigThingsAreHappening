@@ -1,7 +1,7 @@
 const std = @import("std");
 const math = std.math;
 
-const global = @import("global.zig");
+const global = @import("global.zig"); 
 
 pub fn GetRandFromNormalDistribution(p: global.Point, mean: f64, stdDev: f64) global.Point {
     const xI = math.floor(p.x);
