@@ -3,7 +3,7 @@ const math = std.math;
 const rand = std.Random;
 const ArrayList = std.ArrayList;
 
-const utils = @import("distribution.zig");
+const utils = @import("distributions.zig");
 
 const Q1Results = struct {
     var temperatures: []f64 = {};
@@ -12,7 +12,7 @@ const Q1Results = struct {
 
 pub fn simulateTemperatureChange(temp: f64, deltaTime: f64) f64 {
     const seed = 0.164326;
-    return temp + utils.GetRandFromNormalDistribution(seed,seed,0, deltaTime);
+    return temp + utils.GetRandFromNormalDistribution(seed, seed, 0, deltaTime);
 }
 
 pub fn simulateQ1(N: c_int, deltaTime: f64, temperatures: ArrayList(f64)) Q1Results {
