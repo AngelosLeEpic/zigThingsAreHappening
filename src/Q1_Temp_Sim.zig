@@ -11,7 +11,8 @@ const Q1Results = struct {
 };
 
 pub fn simulateTemperatureChange(temp: f64, deltaTime: f64) f64 {
-    return temp + utils.GetRandFromNormalDistribution(0, deltaTime);
+    const seed = 0.164326;
+    return temp + utils.GetRandFromNormalDistribution(seed,seed,0, deltaTime);
 }
 
 pub fn simulateQ1(N: c_int, deltaTime: f64, temperatures: ArrayList(f64)) Q1Results {
