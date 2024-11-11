@@ -5,8 +5,49 @@ const rand = std.Random;
 const dist = @import("distributions.zig");
 const global = @import("global.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
+const os = std.os;
 pub fn main() !void {
-    try Test_Poisson();
+    //const print = std.debug.print;
+
+    //var args = std.process.args();
+
+    //args.skip(); // skip the programme name argument, we don't care about it
+
+    const stdout = std.io.getStdOut().writer();
+    const args = try std.process.argsAlloc(std.heap.page_allocator);
+    var count: c_int = 0;
+    for (args, 0..) |arg, i| {
+        try stdout.print("arg {}: {s}\n", .{ i, arg });
+        count += 1;
+    }
+    try stdout.print("{d}\n", .{count});
+
+    if (std.mem.eql(u8, args[1], "testPoisson")) {
+        try stdout.print("testing poisson distribution functionality\n", .{});
+        try Test_Poisson();
+    } else if (std.mem.eql(u8, args[1], "testNormal")) {
+        try stdout.print("testing normal distribution functinality\n", .{});
+        try Test_GetRandFromNormalDistribution();
+    } else if (std.mem.eql(u8, args[1], "testQ1")) {
+        try stdout.print("testing Q1 functionality\n", .{});
+        if (args.len <= 3) {
+            try stdout.print("ERROR: You must input, seed, test_cases, test_density\n", .{});
+            return;
+        }
+        // TODO parse input to valid values for function
+    } else {
+        try stdout.print("You must input desired function to test, select testPoisson, testNormal or testQ1 to test general functions \n", .{});
+    }
+
+    //print("{i}\n", argv);
+    //print("string: {s}", argc[0]);
+
+    //if (argc. <= 3) {
+    //    print("You must input a valid test for me to run, please select:\n", null);
+    //    print("testPoisson, seed, TestAmount\n", null);
+    //    print("testNormal, seed, TestAmount\n", null);
+    //    print("testQ1, seed, TestAmount, TestDensity\n", null);
+    //}
 }
 
 fn Test_GetRandFromNormalDistribution() !void {
@@ -40,10 +81,8 @@ fn Test_GetRandFromNormalDistribution() !void {
     return;
 }
 
-fn Test_Q1() !void {
-    const MAX_RUNS = 1000;
-    const MCS_SIZE = 100;
-    const StdDev = 0.153214;
+fn Test_Q1(seed: f64, MAX_RUNS: c_int, MCS_SIZE: c_int) !void {
+    const StdDev = (seed * 4) % 5;
     var MAX_TEMPS: [MAX_RUNS]f64 = undefined;
 
     const aloc = std.heap.page_allocator;
@@ -66,6 +105,7 @@ fn Test_Q1() !void {
     // not sure how to write results, should each MCS get its own file? This would result into 1000 csv files
     // but if I keep it all in one file, how will I sort this to seperate each run of the simulation?
     // TODO
+
 }
 
 fn Test_Poisson() !void {
