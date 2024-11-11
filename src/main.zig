@@ -4,7 +4,7 @@ const rand = std.Random;
 
 const dist = @import("distributions.zig");
 const global = @import("global.zig");
-
+const Q1 = @import("Q1_Temp_Sim.zig");
 pub fn main() !void {
     try Test_Poisson();
 }
@@ -24,7 +24,7 @@ fn Test_GetRandFromNormalDistribution() !void {
     for (0..MAX_RUNS) |i| {
         if (global.DEBUG_PRINT)
             std.debug.print("px={}, py={}\n", .{ p.x, p.y });
-    
+
         p = dist.GetRandPointFromNormalDistribution(p, 0, 1);
 
         try writer.print("{d}, {d}\n", .{ p.x, p.y });
@@ -36,15 +36,43 @@ fn Test_GetRandFromNormalDistribution() !void {
     }
 
     file.close();
- 
+
     return;
+}
+
+fn Test_Q1() !void {
+    const MAX_RUNS = 1000;
+    const MCS_SIZE = 100;
+    const StdDev = 0.153214;
+    var MAX_TEMPS: [MAX_RUNS]f64 = undefined;
+
+    const aloc = std.heap.page_allocator;
+
+    const RUNS: [MAX_RUNS]std.ArrayList(f64) = undefined;
+    // allocate memory for arrays
+    for (RUNS) |run| {
+        run = try aloc.alloc(f64, MCS_SIZE);
+    }
+    defer aloc.free(RUNS); // not sure how to free the memory so I put this here tom pls fix ;(
+
+    // begin testing
+    var count = 0;
+    for (RUNS) |run| {
+        const result = Q1.simulateQ1(MCS_SIZE, StdDev, run);
+        MAX_TEMPS[count] = result.maxTemp;
+        count += 1;
+    }
+    // results stored in arrays, writting results
+    // not sure how to write results, should each MCS get its own file? This would result into 1000 csv files
+    // but if I keep it all in one file, how will I sort this to seperate each run of the simulation?
+    // TODO
 }
 
 fn Test_Poisson() !void {
     var rng = rand.DefaultPrng.init(123456789);
     var rando = rng.random();
 
-    const LAMBDA: f64 = 1;    
+    const LAMBDA: f64 = 1;
 
     const currentWD = std.fs.cwd();
 
@@ -53,8 +81,7 @@ fn Test_Poisson() !void {
     try writer.print("Val1, Val2\n", .{});
 
     const MAX_RUNS: c_int = 10000;
-    for (0..MAX_RUNS) |i| {        
-    
+    for (0..MAX_RUNS) |i| {
         const poisson1 = dist.ConvertRandToPoissonDistribution(LAMBDA, rando.float(f64));
         const poisson2 = dist.ConvertRandToPoissonDistribution(LAMBDA, rando.float(f64));
 
@@ -65,6 +92,6 @@ fn Test_Poisson() !void {
     }
 
     file.close();
- 
+
     return;
 }
