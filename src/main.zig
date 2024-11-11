@@ -16,7 +16,7 @@ pub fn main() !void {
     const writer = file.writer();
     try writer.print("Index, Value\n", .{});
 
-    const MAX_RUNS: c_int = 1;
+    const MAX_RUNS: c_int = 10000;
     for (0..MAX_RUNS) |i| {
         //std.debug.print("px={}, py={}\n", .{ p.x, p.y });
         p = GetRandFromNormalDistribution(p, 0, 1);
