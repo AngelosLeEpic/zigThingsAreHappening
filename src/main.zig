@@ -4,13 +4,18 @@ const rand = std.Random;
 
 const Point = struct { x: f64, y: f64 };
 
+const DEBUG_PRINT: bool = false;
+
 pub fn main() !void {
+    try Test_GetRandFromNormalDistribution();
+}
+
+fn Test_GetRandFromNormalDistribution() !void {
     var rng = rand.DefaultPrng.init(123456789);
     var rando = rng.random();
     var p = Point{ .x = rando.floatNorm(f64), .y = rando.floatNorm(f64) };
 
     const currentWD = std.fs.cwd();
-    // std.debug.print("CWD: {}\n", .{currentWD.p});
 
     const file = try currentWD.createFile("Data/TestNormal.csv", .{ .truncate = true });
     const writer = file.writer();
@@ -18,14 +23,17 @@ pub fn main() !void {
 
     const MAX_RUNS: c_int = 10000;
     for (0..MAX_RUNS) |i| {
-        //std.debug.print("px={}, py={}\n", .{ p.x, p.y });
+        if (DEBUG_PRINT)
+            std.debug.print("px={}, py={}\n", .{ p.x, p.y });
+    
         p = GetRandFromNormalDistribution(p, 0, 1);
 
         try writer.print("{d}, {d}\n", .{ p.x, p.y });
         //try writer.print("{d}, {d}\n", .{ i, p.x });
         //try writer.print("{d}, {d}\n", .{ i, p.y });
 
-        std.debug.print("{x}\n", .{i});
+        if (DEBUG_PRINT)
+            std.debug.print("{x},", .{i});
     }
 
     file.close();
@@ -46,7 +54,8 @@ fn GetRandFromNormalDistribution(p: Point, mean: f64, stdDev: f64) Point {
     const z0 = mag * math.cos(math.tau * y);
     const z1 = mag * math.sin(math.tau * y);
 
-    //std.debug.print("RandNorm: x={d}, y={d}\n logVal={d}, mag={d}, z0={d}, z1={d}\n\n", .{ x, y, logVal, mag, z0, z1 });
+    if (DEBUG_PRINT)
+        std.debug.print("RandNorm: x={d}, y={d}\n logVal={d}, mag={d}, z0={d}, z1={d}\n\n", .{ x, y, logVal, mag, z0, z1 });
 
     return Point{
         .x = z0 + mean,
