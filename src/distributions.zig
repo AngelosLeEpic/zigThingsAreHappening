@@ -4,7 +4,47 @@ const rand = std.Random;
 
 const global = @import("global.zig"); 
 
-pub fn GetRandFromNormalDistributionSingle(mean: f64, stdDev: f64, seed: c_int) f64 {
+const Distribution = struct {
+    m_GetRandValFn: fn(*const anyopaque) f64,
+    m_DistRef: anyopaque
+};
+
+const PoissonDist = struct {
+    m_Rate: f64,
+
+    pub fn GetRandVal(self: *const PoissonDist) f64 {
+        return GetRandFromPoissonDistribution(self.m_Rate);
+    }
+};
+
+const NormalDist = struct {
+    m_Mean: f64,
+    m_StdDev: f64,
+
+    pub fn GetRandVal(self: *const NormalDist) f64 {
+        return GetRandFromNormalDistributionSingle(self.m_Mean, self.m_StdDev);
+    }
+};
+
+pub fn CreatePoissonDist(rate:f64) Distribution {
+    var pois: PoissonDist = .{rate};
+    const dist: Distribution = .{ pois.GetRandVal(), &pois};
+    return dist;
+}
+
+pub fn CreateNormalDist(mean:f64, stdDev:f64) Distribution {
+    var norm: NormalDist = .{mean, stdDev};
+    const dist: Distribution = .{ norm.GetRandVal(), &norm};
+    return dist;
+}
+
+//======================================================
+
+pub fn GetRandFromNormalDistributionSingle(mean: f64, stdDev: f64) f64 {
+    return GetRandFromNormalDistributionSingleWithSeed(mean, stdDev, global.GetTrueRandomSeed());
+}
+
+pub fn GetRandFromNormalDistributionSingleWithSeed(mean: f64, stdDev: f64, seed: c_int) f64 {
     var rng = rand.DefaultPrng.init(seed);
     var rando = rng.random();
 
@@ -58,7 +98,11 @@ pub fn GetRandPointFromNormalDistribution(p: global.Point, mean: f64, stdDev: f6
     };
 }
 
-pub fn GetRandFromPoissonDistribution(lambda: f64, seed: c_int) f64 {
+pub fn GetRandFromPoissonDistribution(lambda: f64) f64 {
+    return GetRandFromPoissonDistribution(lambda, global.GetTrueRandomSeed());
+}
+
+pub fn GetRandFromPoissonDistributionWithSeed(lambda: f64, seed: c_int) f64 {
     var rng = rand.DefaultPrng.init(seed);
     var rando = rng.random();
     return -math.log(f64, 10, rando.float(f64)) / lambda;
