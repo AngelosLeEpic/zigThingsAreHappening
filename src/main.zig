@@ -24,7 +24,7 @@ fn Test_GetRandFromNormalDistribution() !void {
     for (0..MAX_RUNS) |i| {
         if (global.DEBUG_PRINT)
             std.debug.print("px={}, py={}\n", .{ p.x, p.y });
-    
+
         p = dist.GetRandFromNormalDistribution(p, 0, 1);
 
         try writer.print("{d}, {d}\n", .{ p.x, p.y });
@@ -36,6 +36,6 @@ fn Test_GetRandFromNormalDistribution() !void {
     }
 
     file.close();
- 
+
     return;
 }
