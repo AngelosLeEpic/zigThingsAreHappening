@@ -82,7 +82,7 @@ fn Test_GetRandFromNormalDistribution() !void {
     return;
 }
 
-fn Test_Q1(StdDev: f64, MAX_RUNS: c_int, MCS_SIZE: c_int, Density: c_int) !void {
+fn Test_Q1(StdDev: f64, MAX_RUNS: c_int, Density: c_int) !void {
     var Results: ArrayList(Q1.Q1Results) = undefined;
     for (0..MAX_RUNS) |i| {
         Results.addOne(Q1.simulateQ1(Density, StdDev, std.time.milliTimestamp() + i));
