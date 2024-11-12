@@ -5,23 +5,27 @@ const ArrayList = std.ArrayList;
 
 const utils = @import("distributions.zig");
 
-const Q1Results = struct {
-    var temperatures: []f64 = {};
+pub const Q1Results = struct {
+    var porpotion = 0;
     var maxTemp: f64 = 0;
 };
 
-pub fn simulateTemperatureChange(temp: f64, deltaTime: f64) f64 {
-    const seed = 0.164326;
-    return temp + utils.GetRandFromNormalDistribution(seed, seed, 0, deltaTime);
+pub fn simulateTemperatureChange(temp: f64, deltaTime: f64, seed: f64) f64 {
+    return temp + utils.GetRandFromNormalDistribution(seed + 1, seed - 1, 0, deltaTime);
 }
 
-pub fn simulateQ1(N: c_int, deltaTime: f64, temperatures: ArrayList(f64)) Q1Results {
+pub fn simulateQ1(N: c_int, deltaTime: f64, seed: f64) Q1Results {
     var count: c_int = 0;
-    var maxTemp = -999;
+    var maxTemp = -999999.0;
     var temp: f64 = 0;
+
+    var aboveZero = 0;
+    seed = seed * std.time.milliTimestamp();
     while (count < N) {
-        temp = simulateTemperatureChange(temp, deltaTime);
-        temperatures.addOne(temp);
+        temp = simulateTemperatureChange(temp, deltaTime, seed * count);
+        if (temp > 0) {
+            aboveZero += 1;
+        }
         if (temp > maxTemp) {
             maxTemp = temp;
         }
@@ -29,7 +33,7 @@ pub fn simulateQ1(N: c_int, deltaTime: f64, temperatures: ArrayList(f64)) Q1Resu
     }
 
     const out: Q1Results = {
-        .temperatures == temperatures;
+        .porpotion == aboveZero / N;
         .maxTempL == maxTemp;
     };
     return out;

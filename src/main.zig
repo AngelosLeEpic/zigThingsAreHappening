@@ -5,6 +5,7 @@ const rand = std.Random;
 const dist = @import("distributions.zig");
 const global = @import("global.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
+const ArrayList = std.ArrayList;
 const os = std.os;
 pub fn main() !void {
     //const print = std.debug.print;
@@ -81,49 +82,27 @@ fn Test_GetRandFromNormalDistribution() !void {
     return;
 }
 
-fn Test_Q1(seed: f64, MAX_RUNS: c_int, MCS_SIZE: c_int) !void {
-    const StdDev = (seed * 4) % 5;
-    var MAX_TEMPS: [MAX_RUNS]f64 = undefined;
-
-    const aloc = std.heap.page_allocator;
-
-    const RUNS: [MAX_RUNS]std.ArrayList(f64) = undefined;
-    // allocate memory for arrays
-    for (RUNS) |run| {
-        run = try aloc.alloc(f64, MCS_SIZE);
+fn Test_Q1(StdDev: f64, MAX_RUNS: c_int, MCS_SIZE: c_int, Density: c_int) !void {
+    var Results: ArrayList(Q1.Q1Results) = undefined;
+    for (0..MAX_RUNS) |i| {
+        Results.addOne(Q1.simulateQ1(Density, StdDev, std.time.milliTimestamp() + i));
     }
-    defer aloc.free(RUNS); // not sure how to free the memory so I put this here tom pls fix ;(
 
-    // begin testing
-    var count = 0;
-    for (RUNS) |run| {
-        const result = Q1.simulateQ1(MCS_SIZE, StdDev, run);
-        MAX_TEMPS[count] = result.maxTemp;
-        count += 1;
-    }
     // results stored in arrays, writting results
     // not sure how to write results, should each MCS get its own file? This would result into 1000 csv files
     // but if I keep it all in one file, how will I sort this to seperate each run of the simulation?
     // TODO
 
     const currentWD = std.fs.cwd();
+    const file = try currentWD.createFile("Data/Q1.csv", .{ .truncate = true });
+    const writer = file.writer();
 
-    
+    try writer.print("Porpotion, MaxTemp", .{});
 
-    const result = simulateQ1(MAX_RUNS, StdDev, )
-
-    for (0..MAX_RUNS) |i| {
-        const file = try currentWD.createFile("Data/Q1MCS/" ++ i.toString() ++ "_simulation.csv", .{ .truncate = true });
-        const writer = file.writer();
-
-
-
-        for (data) |value| {
-            try writer.print("{}, ", .{value}); // Writing each value followed by a comma
-        }
-
-        try writer.print("{}", .{});
+    for (Results) |dataOut| {
+        try writer.print("{f64},{f64} \n", dataOut.porpotion, dataOut.maxTemp);
     }
+    file.close();
 }
 
 fn Test_Poisson() !void {
