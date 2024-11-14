@@ -6,48 +6,46 @@ const dist = @import("distributions.zig");
 const global = @import("global.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
 const os = std.os;
+
 pub fn main() !void {
-    //const print = std.debug.print;
-
-    //var args = std.process.args();
-
-    //args.skip(); // skip the programme name argument, we don't care about it
-
-    const stdout = std.io.getStdOut().writer();
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     var count: c_int = 0;
     for (args, 0..) |arg, i| {
-        try stdout.print("arg {}: {s}\n", .{ i, arg });
+        std.debug.print("arg {}: {s}\n", .{ i, arg });
         count += 1;
     }
-    try stdout.print("{d}\n", .{count});
+
+    std.debug.print("{d}\n", .{count});
+
+    if (count <= 1) {
+        std.debug.print("Not enough args to run any function\n", .{});
+        std.debug.print("Possible tests to invoke: testPoisson, testNormal, testQ1\n", .{});
+        return;
+    }
 
     if (std.mem.eql(u8, args[1], "testPoisson")) {
-        try stdout.print("testing poisson distribution functionality\n", .{});
+        std.debug.print("testing poisson distribution functionality\n", .{});
         try Test_Poisson();
-    } else if (std.mem.eql(u8, args[1], "testNormal")) {
-        try stdout.print("testing normal distribution functinality\n", .{});
+        return;
+    } 
+
+    if (std.mem.eql(u8, args[1], "testNormal")) {
+        std.debug.print("testing normal distribution functinality\n", .{});
         try Test_GetRandFromNormalDistribution();
-    } else if (std.mem.eql(u8, args[1], "testQ1")) {
-        try stdout.print("testing Q1 functionality\n", .{});
+        return;
+    } 
+
+    if (std.mem.eql(u8, args[1], "testQ1")) {
+        std.debug.print("testing Q1 functionality\n", .{});
         if (args.len <= 3) {
-            try stdout.print("ERROR: You must input, seed, test_cases, test_density\n", .{});
+            std.debug.print("ERROR: You must input, seed, test_cases, test_density\n", .{});
             return;
         }
         // TODO parse input to valid values for function
-    } else {
-        try stdout.print("You must input desired function to test, select testPoisson, testNormal or testQ1 to test general functions \n", .{});
-    }
+        return;
+    } 
 
-    //print("{i}\n", argv);
-    //print("string: {s}", argc[0]);
-
-    //if (argc. <= 3) {
-    //    print("You must input a valid test for me to run, please select:\n", null);
-    //    print("testPoisson, seed, TestAmount\n", null);
-    //    print("testNormal, seed, TestAmount\n", null);
-    //    print("testQ1, seed, TestAmount, TestDensity\n", null);
-    //}
+    std.debug.print("You must input desired function to test, select testPoisson, testNormal or testQ1 to test general functions \n", .{});
 }
 
 fn Test_GetRandFromNormalDistribution() !void {
