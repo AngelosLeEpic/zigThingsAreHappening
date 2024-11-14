@@ -1,17 +1,24 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const math = std.math;
 const rand = std.Random;
+const os = std.os;
 
 const dist = @import("distributions.zig");
 const global = @import("global.zig");
 const teamData = @import("teamData.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
-const os = std.os;
 
 pub fn main() !void {
 
-    //teamData.InitData();
-    global.InitRNG();
+    global.Init();    
+    //teamData.InitData();    
+    
+    if (global.IsReleaseMode()){
+        std.debug.print("Running in Release mode\n", .{});
+    }        
+    else 
+        std.debug.print("Running in Debug mode\n", .{});
 
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     var count: c_int = 0;
