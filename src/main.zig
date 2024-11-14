@@ -12,7 +12,7 @@ const Q1 = @import("Q1_Temp_Sim.zig");
 pub fn main() !void {
 
     global.Init();    
-    //teamData.InitData();    
+    try teamData.InitData();    
     
     if (global.IsReleaseMode()){
         std.debug.print("Running in Release mode\n", .{});
@@ -26,8 +26,6 @@ pub fn main() !void {
         std.debug.print("arg {}: {s}\n", .{ i, arg });
         count += 1;
     }
-
-    std.debug.print("{d}\n", .{count});
 
     if (count <= 1) {
         std.debug.print("Not enough args to run any function\n", .{});
@@ -60,6 +58,12 @@ pub fn main() !void {
     if (std.mem.eql(u8, args[1], "testDistClasses")) {
         std.debug.print("Testing distribution classes\n", .{});
         try Test_DistributionsClasses();
+        return;
+    } 
+
+    if (std.mem.eql(u8, args[1], "testTeamData")) {
+        std.debug.print("Testing team data\n", .{});
+        Test_TeamData();
         return;
     } 
 
@@ -171,4 +175,16 @@ pub fn Test_DistributionsClasses() !void {
     }
 
     file.close();
+}
+
+pub fn Test_TeamData() void {
+    std.debug.print("Printing all team data...\n\n", .{});
+    for (0..teamData.GetTeamCount()) |i| {
+        const teamName = teamData.GetTeamName(i);
+        const shots = teamData.GetShotCount(i);
+        const saves = teamData.GetSavesCount(i);
+        const shotsOnTarget = teamData.GetShotsOnTargetCount(i);
+
+        std.debug.print("TeamName={s}, Shots={}, OnTarget={}, Saves={}\n\n", .{teamName, shots, shotsOnTarget, saves});
+    }    
 }
