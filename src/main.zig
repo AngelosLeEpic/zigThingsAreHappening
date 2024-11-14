@@ -4,50 +4,59 @@ const rand = std.Random;
 
 const dist = @import("distributions.zig");
 const global = @import("global.zig");
+const teamData = @import("teamData.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
 const os = std.os;
+
 pub fn main() !void {
-    //const print = std.debug.print;
 
-    //var args = std.process.args();
+    //teamData.InitData();
+    global.InitRNG();
 
-    //args.skip(); // skip the programme name argument, we don't care about it
-
-    const stdout = std.io.getStdOut().writer();
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     var count: c_int = 0;
     for (args, 0..) |arg, i| {
-        try stdout.print("arg {}: {s}\n", .{ i, arg });
+        std.debug.print("arg {}: {s}\n", .{ i, arg });
         count += 1;
     }
-    try stdout.print("{d}\n", .{count});
+
+    std.debug.print("{d}\n", .{count});
+
+    if (count <= 1) {
+        std.debug.print("Not enough args to run any function\n", .{});
+        std.debug.print("Possible tests to invoke: testPoisson, testNormal, testQ1\n", .{});
+        return;
+    }
 
     if (std.mem.eql(u8, args[1], "testPoisson")) {
-        try stdout.print("testing poisson distribution functionality\n", .{});
+        std.debug.print("testing poisson distribution functionality\n", .{});
         try Test_Poisson();
-    } else if (std.mem.eql(u8, args[1], "testNormal")) {
-        try stdout.print("testing normal distribution functinality\n", .{});
+        return;
+    } 
+
+    if (std.mem.eql(u8, args[1], "testNormal")) {
+        std.debug.print("testing normal distribution functinality\n", .{});
         try Test_GetRandFromNormalDistribution();
-    } else if (std.mem.eql(u8, args[1], "testQ1")) {
-        try stdout.print("testing Q1 functionality\n", .{});
+        return;
+    } 
+
+    if (std.mem.eql(u8, args[1], "testQ1")) {
+        std.debug.print("testing Q1 functionality\n", .{});
         if (args.len <= 3) {
-            try stdout.print("ERROR: You must input, seed, test_cases, test_density\n", .{});
+            std.debug.print("ERROR: You must input, seed, test_cases, test_density\n", .{});
             return;
         }
         // TODO parse input to valid values for function
-    } else {
-        try stdout.print("You must input desired function to test, select testPoisson, testNormal or testQ1 to test general functions \n", .{});
-    }
+        return;
+    } 
 
-    //print("{i}\n", argv);
-    //print("string: {s}", argc[0]);
+    if (std.mem.eql(u8, args[1], "testDistClasses")) {
+        std.debug.print("Testing distribution classes\n", .{});
+        try Test_DistributionsClasses();
+        return;
+    } 
 
-    //if (argc. <= 3) {
-    //    print("You must input a valid test for me to run, please select:\n", null);
-    //    print("testPoisson, seed, TestAmount\n", null);
-    //    print("testNormal, seed, TestAmount\n", null);
-    //    print("testQ1, seed, TestAmount, TestDensity\n", null);
-    //}
+    std.debug.print("You must input desired function to test, select testPoisson, testNormal or testQ1 to test general functions \n", .{});
 }
 
 fn Test_GetRandFromNormalDistribution() !void {
@@ -76,9 +85,7 @@ fn Test_GetRandFromNormalDistribution() !void {
             std.debug.print("{x},", .{i});
     }
 
-    file.close();
-
-    return;
+    file.close();    
 }
 
 fn Test_Q1(seed: f64, MAX_RUNS: c_int, MCS_SIZE: c_int) !void {
@@ -122,8 +129,8 @@ fn Test_Poisson() !void {
 
     const MAX_RUNS: c_int = 10000;
     for (0..MAX_RUNS) |i| {
-        const poisson1 = dist.ConvertRandToPoissonDistribution(LAMBDA, rando.float(f64));
-        const poisson2 = dist.ConvertRandToPoissonDistribution(LAMBDA, rando.float(f64));
+        const poisson1 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
+        const poisson2 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
 
         try writer.print("{d}, {d}\n", .{ poisson1, poisson2 });
 
@@ -134,4 +141,27 @@ fn Test_Poisson() !void {
     file.close();
 
     return;
+}
+
+pub fn Test_DistributionsClasses() !void {    
+    const currentWD = std.fs.cwd();
+
+    const file = try currentWD.createFile("Data/TestNormalDistClass.csv", .{ .truncate = true });
+    const writer = file.writer();
+    try writer.print("Value1, Value2\n", .{});
+
+    const MAX_RUNS: c_int = 1000;
+
+    var allocator = std.heap.page_allocator;
+
+    var normDist = try dist.CreateNormalDist(0.0, 1.0, allocator);
+    defer allocator.destroy(normDist);
+
+    for (0..MAX_RUNS) |_| {    
+        const r1 = normDist.GetRandVal();
+        const r2 = normDist.GetRandVal();
+        try writer.print("{d}, {d}\n", .{ r1, r2 });        
+    }
+
+    file.close();
 }
