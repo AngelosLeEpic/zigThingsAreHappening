@@ -4,10 +4,15 @@ const rand = std.Random;
 
 const dist = @import("distributions.zig");
 const global = @import("global.zig");
+const teamData = @import("teamData.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
 const os = std.os;
 
 pub fn main() !void {
+
+    //teamData.InitData();
+    global.InitRNG();
+
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     var count: c_int = 0;
     for (args, 0..) |arg, i| {
@@ -45,6 +50,12 @@ pub fn main() !void {
         return;
     } 
 
+    if (std.mem.eql(u8, args[1], "testDistClasses")) {
+        std.debug.print("Testing distribution classes\n", .{});
+        try Test_DistributionsClasses();
+        return;
+    } 
+
     std.debug.print("You must input desired function to test, select testPoisson, testNormal or testQ1 to test general functions \n", .{});
 }
 
@@ -74,9 +85,7 @@ fn Test_GetRandFromNormalDistribution() !void {
             std.debug.print("{x},", .{i});
     }
 
-    file.close();
-
-    return;
+    file.close();    
 }
 
 fn Test_Q1(seed: f64, MAX_RUNS: c_int, MCS_SIZE: c_int) !void {
@@ -120,8 +129,8 @@ fn Test_Poisson() !void {
 
     const MAX_RUNS: c_int = 10000;
     for (0..MAX_RUNS) |i| {
-        const poisson1 = dist.ConvertRandToPoissonDistribution(LAMBDA, rando.float(f64));
-        const poisson2 = dist.ConvertRandToPoissonDistribution(LAMBDA, rando.float(f64));
+        const poisson1 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
+        const poisson2 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
 
         try writer.print("{d}, {d}\n", .{ poisson1, poisson2 });
 
@@ -132,4 +141,27 @@ fn Test_Poisson() !void {
     file.close();
 
     return;
+}
+
+pub fn Test_DistributionsClasses() !void {    
+    const currentWD = std.fs.cwd();
+
+    const file = try currentWD.createFile("Data/TestNormalDistClass.csv", .{ .truncate = true });
+    const writer = file.writer();
+    try writer.print("Value1, Value2\n", .{});
+
+    const MAX_RUNS: c_int = 1000;
+
+    var allocator = std.heap.page_allocator;
+
+    var normDist = try dist.CreateNormalDist(0.0, 1.0, allocator);
+    defer allocator.destroy(normDist);
+
+    for (0..MAX_RUNS) |_| {    
+        const r1 = normDist.GetRandVal();
+        const r2 = normDist.GetRandVal();
+        try writer.print("{d}, {d}\n", .{ r1, r2 });        
+    }
+
+    file.close();
 }
