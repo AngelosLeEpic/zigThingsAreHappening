@@ -10,10 +10,14 @@ pub const Q1Results = struct {
     var maxTemp: f64 = 0;
 };
 
+// Simulates just one change in the temperature for running the monte carlo simulations
 pub fn simulateTemperatureChange(temp: f64, deltaTime: f64, seed: f64) f64 {
     return temp + utils.GetRandFromNormalDistribution(seed + 1, seed - 1, 0, deltaTime);
 }
 
+//runs a single monte carlo simulation for Q1, the temperature is changed a total of N times
+// N can be said to represent the depth of that simulation
+// returns the porpotion and MaxTemperature seen
 pub fn simulateQ1(N: c_int, deltaTime: f64, seed: f64) Q1Results {
     var count: c_int = 0;
     var maxTemp = -999999.0;
