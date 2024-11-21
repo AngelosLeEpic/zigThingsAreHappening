@@ -5,9 +5,9 @@ const ArrayList = std.ArrayList;
 
 const utils = @import("distributions.zig");
 
-pub const Q1Results: type = struct {
-    var porpotion: f64 = 0.0;
-    var maxTemp: f64 = 0.0;
+pub const Q1Results = struct {
+    porpotion: f64 = 0.0,
+    maxTemp: f64 = 0.0,
 };
 
 // Simulates just one change in the temperature for running the monte carlo simulations
@@ -38,6 +38,6 @@ pub fn simulateQ1(N: i64, deltaTime: f64, seed: i64) Q1Results {
     }
     const finalPorpotion: f64 = @as(f64, @floatFromInt(aboveZero)) / @as(f64, @floatFromInt(N));
 
-    const result = Q1Results{ .porpotion == finalPorpotion, .maxTempL == maxTemp };
+    const result = Q1Results{ .porpotion = finalPorpotion, .maxTemp = maxTemp };
     return result;
 }

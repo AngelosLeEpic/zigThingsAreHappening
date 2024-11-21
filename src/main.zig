@@ -44,9 +44,7 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, args[1], "testQ1")) {
-        try {
-            Test_Q1();
-        };
+        try Test_Q1();
         return;
     }
 
@@ -102,7 +100,7 @@ fn Test_Q1() !void {
 
     for (0..N) |x| {
         const i: i64 = @intCast(x);
-        Results.append(Q1.simulateQ1(TestDensity, StdDev, std.time.milliTimestamp() + i));
+        try Results.append(Q1.simulateQ1(TestDensity, StdDev, std.time.milliTimestamp() + i));
     }
 
     // results stored in arrays, writting results
@@ -116,8 +114,9 @@ fn Test_Q1() !void {
 
     try writer.print("Porpotion, MaxTemp", .{});
 
-    for (Results) |dataOut| {
-        try writer.print("{f64},{f64} \n", dataOut.porpotion, dataOut.maxTemp);
+    for (Results.items) |dataOut| {
+        // try writer.print("{f64},{f64} \n", .dataOut.porpotion, dataOut.maxTemp);
+        try writer.print("{d}, {d}", .{ dataOut.porpotion, dataOut.maxTemp });
     }
     file.close();
 }
