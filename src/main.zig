@@ -2,7 +2,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 const math = std.math;
 const rand = std.Random;
-const os = std.os;
 
 const dist = @import("distributions.zig");
 const global = @import("global.zig");
@@ -45,12 +44,9 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, args[1], "testQ1")) {
-        std.debug.print("testing Q1 functionality\n", .{});
-        if (args.len <= 3) {
-            std.debug.print("ERROR: You must input, seed, test_cases, test_density\n", .{});
-            return;
-        }
-        // TODO parse input to valid values for function
+        try {
+            Test_Q1();
+        };
         return;
     }
 
@@ -98,10 +94,15 @@ fn Test_GetRandFromNormalDistribution() !void {
     file.close();
 }
 
-fn Test_Q1(StdDev: f64, MAX_RUNS: c_int, Density: c_int) !void {
+fn Test_Q1() !void {
     var Results: ArrayList(Q1.Q1Results) = undefined;
-    for (0..MAX_RUNS) |i| {
-        Results.addOne(Q1.simulateQ1(Density, StdDev, std.time.milliTimestamp() + i));
+    const TestDensity: u32 = 1000;
+    const N: u32 = 100;
+    const StdDev: comptime_float = 2.3;
+
+    for (0..N) |x| {
+        const i: i64 = @intCast(x);
+        Results.append(Q1.simulateQ1(TestDensity, StdDev, std.time.milliTimestamp() + i));
     }
 
     // results stored in arrays, writting results
