@@ -158,12 +158,16 @@ fn Test_Poisson() !void {
     }
     const allocator = gpa.allocator();
 
-    var df = try zandas.csv_to_df("Data/TestPoisson.csv", allocator);
+    var df = try zandas.csv_to_df(f32, "Data/TestPoisson.csv", allocator);
     defer df.deinit();
-    const row = try df.get_row(0);
-    defer row.deinit();
-    std.debug.print("csv_data: {any}\n", .{row.items});
-    std.debug.print("csv_data: {any}\n", .{df.get(0, 0)});
+
+    // plotting data
+    const plot = @import("plot.zig");
+
+    const x = df.get_col(0).items;
+    const y = df.get_col(1).items;
+
+    try plot.scatter_plot(x, y, allocator);
 
     return;
 }
