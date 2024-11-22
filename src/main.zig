@@ -134,14 +134,14 @@ fn Test_Poisson() !void {
 
     const file = try currentWD.createFile("Data/TestPoisson.csv", .{ .truncate = true });
     const writer = file.writer();
-    try writer.print("Val1, Val2\n", .{});
+    try writer.print("Val1,Val2\n", .{});
 
     const MAX_RUNS: c_int = 10000;
     for (0..MAX_RUNS) |i| {
         const poisson1 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
         const poisson2 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
 
-        try writer.print("{d}, {d}\n", .{ poisson1, poisson2 });
+        try writer.print("{d},{d}\n", .{ poisson1, poisson2 });
 
         if (global.DEBUG_PRINT)
             std.debug.print("{x},", .{i});
@@ -158,7 +158,7 @@ fn Test_Poisson() !void {
     }
     const allocator = gpa.allocator();
 
-    var df = try zandas.csv_to_df("Data/TestNormal.csv", allocator);
+    var df = try zandas.csv_to_df("Data/TestPoisson.csv", allocator);
     defer df.deinit();
     const row = try df.get_row(0);
     defer row.deinit();
@@ -173,7 +173,7 @@ pub fn Test_DistributionsClasses() !void {
 
     const file = try currentWD.createFile("Data/TestNormalDistClass.csv", .{ .truncate = true });
     const writer = file.writer();
-    try writer.print("Value1, Value2\n", .{});
+    try writer.print("Value1,Value2\n", .{});
 
     const MAX_RUNS: c_int = 1000;
 
@@ -185,7 +185,7 @@ pub fn Test_DistributionsClasses() !void {
     for (0..MAX_RUNS) |_| {
         const r1 = normDist.GetRandVal();
         const r2 = normDist.GetRandVal();
-        try writer.print("{d}, {d}\n", .{ r1, r2 });
+        try writer.print("{d},{d}\n", .{ r1, r2 });
     }
 
     file.close();

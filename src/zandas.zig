@@ -71,8 +71,10 @@ const Dataframe = struct {
 };
 
 pub fn csv_to_df(comptime csv_filename: []const u8, allocator: std.mem.Allocator) !Dataframe {
-    const csv_file = @embedFile(csv_filename);
-    var line_iter = std.mem.tokenizeAny(u8, csv_file, "\n");
+    const fs = std.fs.cwd();
+    const file = try fs.readFileAlloc(allocator, csv_filename, 1024 * 1024);
+    defer allocator.free(file);
+    var line_iter = std.mem.tokenizeAny(u8, file, "\n");
 
     const col_names = line_iter.next().?;
     var col_names_split = std.mem.tokenizeAny(u8, col_names, ",");
