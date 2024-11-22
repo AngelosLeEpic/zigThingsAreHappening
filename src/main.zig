@@ -2,12 +2,13 @@ const std = @import("std");
 const builtin = @import("builtin");
 const math = std.math;
 const rand = std.Random;
-const os = std.os;
 
 const dist = @import("distributions.zig");
 const global = @import("global.zig");
 const teamData = @import("teamData.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
+const ArrayList = std.ArrayList;
+const os = std.os;
 
 const g_QuarantineOpen: bool = false;
 
@@ -45,12 +46,7 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, args[1], "testQ1")) {
-        std.debug.print("testing Q1 functionality\n", .{});
-        if (args.len <= 3) {
-            std.debug.print("ERROR: You must input, seed, test_cases, test_density\n", .{});
-            return;
-        }
-        // TODO parse input to valid values for function
+        try Test_Q1();
         return;
     }
 
@@ -101,31 +97,37 @@ fn Test_GetRandFromNormalDistribution() !void {
     try create_graph_from_csv("TestNormal");
 }
 
-fn Test_Q1(seed: f64, MAX_RUNS: c_int, MCS_SIZE: c_int) !void {
-    const StdDev = (seed * 4) % 5;
-    var MAX_TEMPS: [MAX_RUNS]f64 = undefined;
+fn Test_Q1() !void {
+    const Q1Allocator = std.heap.page_allocator;
+    var Results: ArrayList(Q1.Q1Results) = ArrayList(Q1.Q1Results).init(Q1Allocator);
+    const TestDensity: u32 = 1000;
+    const N: u32 = 100;
+    const StdDev: f64 = 2.3;
 
-    const aloc = std.heap.page_allocator;
-
-    const RUNS: [MAX_RUNS]std.ArrayList(f64) = undefined;
-    // allocate memory for arrays
-    for (RUNS) |run| {
-        run = try aloc.alloc(f64, MCS_SIZE);
+    for (0..N) |x| {
+        std.debug.print("performing test: {}\n", .{x});
+        try Results.append(Q1.simulateQ1(TestDensity, StdDev));
     }
-    defer aloc.free(RUNS); // not sure how to free the memory so I put this here tom pls fix ;(
 
-    // begin testing
-    var count = 0;
-    for (RUNS) |run| {
-        const result = Q1.simulateQ1(MCS_SIZE, StdDev, run);
-        MAX_TEMPS[count] = result.maxTemp;
-        count += 1;
-    }
     // results stored in arrays, writting results
     // not sure how to write results, should each MCS get its own file? This would result into 1000 csv files
     // but if I keep it all in one file, how will I sort this to seperate each run of the simulation?
     // TODO
 
+    std.debug.print("tests run fine, writting results of Q1\n", .{});
+
+    const currentWD = std.fs.cwd();
+    const file = try currentWD.createFile("Data/Q1.csv", .{ .truncate = true });
+    defer file.close();
+    const writer = file.writer();
+    std.debug.print("created file for writting\n", .{});
+
+    try writer.print("Porpotion,MaxTemp\n", .{});
+
+    for (Results.items) |dataOut| {
+        // try writer.print("{f64},{f64} \n", .dataOut.porpotion, dataOut.maxTemp);
+        try writer.print("{d},{d}\n", .{ dataOut.porpotion, dataOut.maxTemp });
+    }
 }
 
 fn Test_Poisson() !void {
@@ -213,7 +215,7 @@ pub fn create_graph_from_csv(test_name: []const u8) !void {
     var df = try zandas.csv_to_df(f32, file_name.items, allocator);
     defer df.deinit();
 
-    // plotting data    
+    // plotting data
 
     const x = df.get_col(0).items;
     const y = df.get_col(1).items;
