@@ -126,7 +126,6 @@ fn Test_Q1() !void {
         // try writer.print("{f64},{f64} \n", .dataOut.porpotion, dataOut.maxTemp);
         try writer.print("{d},{d}\n", .{ dataOut.porpotion, dataOut.maxTemp });
     }
-    file.close();
 }
 
 fn Test_Poisson() !void {
