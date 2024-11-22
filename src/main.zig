@@ -81,7 +81,6 @@ fn Test_GetRandFromNormalDistribution() !void {
         if (global.DEBUG_PRINT)
             std.debug.print("px={},py={}\n", .{ p.x, p.y });
 
-
         p = dist.GetRandPointFromNormalDistribution(p, 0, 1);
 
         try writer.print("{d},{d}\n", .{ p.x, p.y });
@@ -92,7 +91,7 @@ fn Test_GetRandFromNormalDistribution() !void {
             std.debug.print("{x},", .{i});
     }
 
-    try create_graph_from_csv("TestNormal");
+    try create_graph_from_csv("TestNormal", "Data/normal_scatter_plot.svg");
 }
 
 fn Test_Q1() !void {
@@ -152,7 +151,7 @@ fn Test_Poisson() !void {
             std.debug.print("{x},", .{i});
     }
 
-    try create_graph_from_csv("TestPoisson");
+    try create_graph_from_csv("TestPoisson", "Data/poisson_scatter_plot.svg");
 }
 
 pub fn Test_DistributionsClasses() !void {
@@ -189,9 +188,9 @@ pub fn Test_TeamData() void {
     }
 }
 
-pub fn create_graph_from_csv(test_name: []const u8) !void {
+pub fn create_graph_from_csv(test_name: []const u8, output_file: []const u8) !void {
     const zandas = @import("zandas.zig");
-    const plot = @import("plot.zig");    
+    const plot = @import("plot.zig");
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
@@ -213,5 +212,5 @@ pub fn create_graph_from_csv(test_name: []const u8) !void {
     const x = df.get_col(0).items;
     const y = df.get_col(1).items;
 
-    try plot.scatter_plot(x, y, allocator);
+    try plot.scatter_plot(x, y, output_file, allocator);
 }
