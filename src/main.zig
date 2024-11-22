@@ -19,11 +19,7 @@ pub fn main() !void {
     } else std.debug.print("Running in Debug mode\n", .{});
 
     const args = try std.process.argsAlloc(std.heap.page_allocator);
-    var count: c_int = 0;
-    for (args, 0..) |arg, i| {
-        std.debug.print("arg {}: {s}\n", .{ i, arg });
-        count += 1;
-    }
+    const count: usize = args.len;
 
     if (count <= 1) {
         std.debug.print("Not enough args to run any function\n", .{});
@@ -101,15 +97,9 @@ fn Test_Q1() !void {
     const N: u32 = 100;
     const StdDev: f64 = 2.3;
 
-    for (0..N) |x| {
-        std.debug.print("performing test: {}\n", .{x});
+    for (0..N) |_| {
         try Results.append(Q1.simulateQ1(TestDensity, StdDev));
     }
-
-    // results stored in arrays, writting results
-    // not sure how to write results, should each MCS get its own file? This would result into 1000 csv files
-    // but if I keep it all in one file, how will I sort this to seperate each run of the simulation?
-    // TODO
 
     std.debug.print("tests run fine, writting results of Q1\n", .{});
 
@@ -125,6 +115,7 @@ fn Test_Q1() !void {
         // try writer.print("{f64},{f64} \n", .dataOut.porpotion, dataOut.maxTemp);
         try writer.print("{d},{d}\n", .{ dataOut.porpotion, dataOut.maxTemp });
     }
+    try create_graph_from_csv("Q1", "Data/q1_scatter_plot.svg");
 }
 
 fn Test_Poisson() !void {
