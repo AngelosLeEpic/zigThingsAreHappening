@@ -76,6 +76,7 @@ fn Test_GetRandFromNormalDistribution() !void {
     const currentWD = std.fs.cwd();
 
     const file = try currentWD.createFile("Data/TestNormal.csv", .{ .truncate = true });
+    defer file.close();
     const writer = file.writer();
     try writer.print("Index,Value\n", .{});
 
@@ -93,8 +94,7 @@ fn Test_GetRandFromNormalDistribution() !void {
         if (global.DEBUG_PRINT)
             std.debug.print("{x},", .{i});
     }
-
-    file.close();
+    try create_graph_from_csv("TestNormal");
 }
 
 fn Test_Q1(seed: f64, MAX_RUNS: c_int, MCS_SIZE: c_int) !void {
@@ -133,6 +133,7 @@ fn Test_Poisson() !void {
     const currentWD = std.fs.cwd();
 
     const file = try currentWD.createFile("Data/TestPoisson.csv", .{ .truncate = true });
+    defer file.close();
     const writer = file.writer();
     try writer.print("Val1,Val2\n", .{});
 
@@ -147,35 +148,14 @@ fn Test_Poisson() !void {
             std.debug.print("{x},", .{i});
     }
 
-    file.close();
-
-    // reading data
-    const zandas = @import("zandas.zig");
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer {
-        const deinit_status = gpa.deinit();
-        if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
-    }
-    const allocator = gpa.allocator();
-
-    var df = try zandas.csv_to_df(f32, "Data/TestPoisson.csv", allocator);
-    defer df.deinit();
-
-    // plotting data
-    const plot = @import("plot.zig");
-
-    const x = df.get_col(0).items;
-    const y = df.get_col(1).items;
-
-    try plot.scatter_plot(x, y, allocator);
-
-    return;
+    try create_graph_from_csv("TestPoisson");
 }
 
 pub fn Test_DistributionsClasses() !void {
     const currentWD = std.fs.cwd();
 
     const file = try currentWD.createFile("Data/TestNormalDistClass.csv", .{ .truncate = true });
+    defer file.close();
     const writer = file.writer();
     try writer.print("Value1,Value2\n", .{});
 
@@ -191,8 +171,6 @@ pub fn Test_DistributionsClasses() !void {
         const r2 = normDist.GetRandVal();
         try writer.print("{d},{d}\n", .{ r1, r2 });
     }
-
-    file.close();
 }
 
 pub fn Test_TeamData() void {
@@ -205,4 +183,30 @@ pub fn Test_TeamData() void {
 
         std.debug.print("TeamName={s}, Shots={}, OnTarget={}, Saves={}\n\n", .{ teamName, shots, shotsOnTarget, saves });
     }
+}
+
+pub fn create_graph_from_csv(test_name: []const u8) !void {
+    const zandas = @import("zandas.zig");
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer {
+        const deinit_status = gpa.deinit();
+        if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
+    }
+    const allocator = gpa.allocator();
+
+    var file_name = std.ArrayList(u8).init(allocator);
+    defer file_name.deinit();
+    try file_name.writer().print("Data/{s}.csv", .{test_name});
+
+    // reading data
+    var df = try zandas.csv_to_df(f32, file_name.items, allocator);
+    defer df.deinit();
+
+    // plotting data
+    const plot = @import("plot.zig");
+
+    const x = df.get_col(0).items;
+    const y = df.get_col(1).items;
+
+    try plot.scatter_plot(x, y, allocator);
 }
