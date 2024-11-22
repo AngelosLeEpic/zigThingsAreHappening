@@ -9,9 +9,16 @@ const DistributionType = enum {
 };
 
 const Distribution = struct {
+    // NORMAL
     m_Mean : f64 = 0.0,
     m_StdDev : f64 = 0.0,
+
+    // POISSON
     m_Rate : f64 = 0.0,
+
+    // UNIFORM
+    m_IntervalMin : f64 = 0.0,
+    m_IntervalMax : f64 = 1.0,
 
     m_Type : DistributionType,
 
@@ -23,7 +30,7 @@ const Distribution = struct {
             return GetRandFromPoissonDistribution(this.m_Rate);
 
         if (this.m_Type == DistributionType.UNIFORM)
-            return -1;
+            return GetRandFromUnifromDistributionSingle(this.m_IntervalMin, this.m_IntervalMax);
 
         return -1;
     }    
@@ -44,7 +51,28 @@ pub fn CreatePoissonDist(rate : f64, allocator : std.mem.Allocator) !*Distributi
     return dist;
 }
 
+pub fn CreateUniformDist(intervalMin : f64, intervalMax : f64, allocator : std.mem.Allocator) !*Distribution {
+    var dist = try allocator.create(Distribution);
+    dist.m_IntervalMin = intervalMin;
+    dist.m_IntervalMax = intervalMax;
+    dist.m_Type = DistributionType.UNIFORM;
+    return dist;
+}
+
 //======================================================
+
+pub fn GetRandFromUnifromDistributionSingle(min : f64, max : f64) f64 {
+    return GetRandFromUnifromDistributionSingleWithSeed(min, max, global.GetTrueRandomU64());
+}
+
+pub fn GetRandFromUnifromDistributionSingleWithSeed(min : f64, max : f64, seed : u64) f64 {
+    const intervalRange: f64 = max - min;
+    var rng = rand.DefaultPrng.init(seed);
+    var rando = rng.random();
+
+    const randUnif = rando.floatNorm(f64);
+    return randUnif * intervalRange + min;
+}
 
 pub fn GetRandFromNormalDistributionSingle(mean: f64, stdDev: f64) f64 {
     return GetRandFromNormalDistributionSingleWithSeed(mean, stdDev, global.GetTrueRandomU64());
