@@ -10,15 +10,12 @@ const teamData = @import("teamData.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
 
 pub fn main() !void {
+    global.Init();
+    try teamData.InitData();
 
-    global.Init();    
-    try teamData.InitData();    
-    
-    if (global.IsReleaseMode()){
+    if (global.IsReleaseMode()) {
         std.debug.print("Running in Release mode\n", .{});
-    }        
-    else 
-        std.debug.print("Running in Debug mode\n", .{});
+    } else std.debug.print("Running in Debug mode\n", .{});
 
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     var count: c_int = 0;
@@ -37,13 +34,13 @@ pub fn main() !void {
         std.debug.print("testing poisson distribution functionality\n", .{});
         try Test_Poisson();
         return;
-    } 
+    }
 
     if (std.mem.eql(u8, args[1], "testNormal")) {
         std.debug.print("testing normal distribution functinality\n", .{});
         try Test_GetRandFromNormalDistribution();
         return;
-    } 
+    }
 
     if (std.mem.eql(u8, args[1], "testQ1")) {
         std.debug.print("testing Q1 functionality\n", .{});
@@ -53,24 +50,25 @@ pub fn main() !void {
         }
         // TODO parse input to valid values for function
         return;
-    } 
+    }
 
     if (std.mem.eql(u8, args[1], "testDistClasses")) {
         std.debug.print("Testing distribution classes\n", .{});
         try Test_DistributionsClasses();
         return;
-    } 
+    }
 
     if (std.mem.eql(u8, args[1], "testTeamData")) {
         std.debug.print("Testing team data\n", .{});
         Test_TeamData();
         return;
-    } 
+    }
 
     std.debug.print("You must input desired function to test, select testPoisson, testNormal or testQ1 to test general functions \n", .{});
 }
 
 fn Test_GetRandFromNormalDistribution() !void {
+    // writing data
     var rng = rand.DefaultPrng.init(123456789);
     var rando = rng.random();
     var p = global.Point{ .x = rando.floatNorm(f64), .y = rando.floatNorm(f64) };
@@ -79,16 +77,16 @@ fn Test_GetRandFromNormalDistribution() !void {
 
     const file = try currentWD.createFile("Data/TestNormal.csv", .{ .truncate = true });
     const writer = file.writer();
-    try writer.print("Index, Value\n", .{});
+    try writer.print("Index,Value\n", .{});
 
     const MAX_RUNS: c_int = 10000;
     for (0..MAX_RUNS) |i| {
         if (global.DEBUG_PRINT)
-            std.debug.print("px={}, py={}\n", .{ p.x, p.y });
+            std.debug.print("px={},py={}\n", .{ p.x, p.y });
 
         p = dist.GetRandPointFromNormalDistribution(p, 0, 1);
 
-        try writer.print("{d}, {d}\n", .{ p.x, p.y });
+        try writer.print("{d},{d}\n", .{ p.x, p.y });
         //try writer.print("{d}, {d}\n", .{ i, p.x });
         //try writer.print("{d}, {d}\n", .{ i, p.y });
 
@@ -96,7 +94,7 @@ fn Test_GetRandFromNormalDistribution() !void {
             std.debug.print("{x},", .{i});
     }
 
-    file.close();    
+    file.close();
 }
 
 fn Test_Q1(seed: f64, MAX_RUNS: c_int, MCS_SIZE: c_int) !void {
@@ -136,14 +134,14 @@ fn Test_Poisson() !void {
 
     const file = try currentWD.createFile("Data/TestPoisson.csv", .{ .truncate = true });
     const writer = file.writer();
-    try writer.print("Val1, Val2\n", .{});
+    try writer.print("Val1,Val2\n", .{});
 
     const MAX_RUNS: c_int = 10000;
     for (0..MAX_RUNS) |i| {
         const poisson1 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
         const poisson2 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
 
-        try writer.print("{d}, {d}\n", .{ poisson1, poisson2 });
+        try writer.print("{d},{d}\n", .{ poisson1, poisson2 });
 
         if (global.DEBUG_PRINT)
             std.debug.print("{x},", .{i});
@@ -151,15 +149,31 @@ fn Test_Poisson() !void {
 
     file.close();
 
+    // reading data
+    const zandas = @import("zandas.zig");
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer {
+        const deinit_status = gpa.deinit();
+        if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
+    }
+    const allocator = gpa.allocator();
+
+    var df = try zandas.csv_to_df("Data/TestPoisson.csv", allocator);
+    defer df.deinit();
+    const row = try df.get_row(0);
+    defer row.deinit();
+    std.debug.print("csv_data: {any}\n", .{row.items});
+    std.debug.print("csv_data: {any}\n", .{df.get(0, 0)});
+
     return;
 }
 
-pub fn Test_DistributionsClasses() !void {    
+pub fn Test_DistributionsClasses() !void {
     const currentWD = std.fs.cwd();
 
     const file = try currentWD.createFile("Data/TestNormalDistClass.csv", .{ .truncate = true });
     const writer = file.writer();
-    try writer.print("Value1, Value2\n", .{});
+    try writer.print("Value1,Value2\n", .{});
 
     const MAX_RUNS: c_int = 1000;
 
@@ -168,10 +182,10 @@ pub fn Test_DistributionsClasses() !void {
     var normDist = try dist.CreateNormalDist(0.0, 1.0, allocator);
     defer allocator.destroy(normDist);
 
-    for (0..MAX_RUNS) |_| {    
+    for (0..MAX_RUNS) |_| {
         const r1 = normDist.GetRandVal();
         const r2 = normDist.GetRandVal();
-        try writer.print("{d}, {d}\n", .{ r1, r2 });        
+        try writer.print("{d},{d}\n", .{ r1, r2 });
     }
 
     file.close();
@@ -185,6 +199,6 @@ pub fn Test_TeamData() void {
         const saves = teamData.GetSavesCount(i);
         const shotsOnTarget = teamData.GetShotsOnTargetCount(i);
 
-        std.debug.print("TeamName={s}, Shots={}, OnTarget={}, Saves={}\n\n", .{teamName, shots, shotsOnTarget, saves});
-    }    
+        std.debug.print("TeamName={s}, Shots={}, OnTarget={}, Saves={}\n\n", .{ teamName, shots, shotsOnTarget, saves });
+    }
 }

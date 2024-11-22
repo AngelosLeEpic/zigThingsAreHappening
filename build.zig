@@ -88,4 +88,12 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_lib_unit_tests.step);
     test_step.dependOn(&run_exe_unit_tests.step);
+
+    // Libs
+    const zigplotlib = b.dependency("zigplotlib", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    exe.root_module.addImport("plotlib", zigplotlib.module("zigplotlib"));
 }
