@@ -4,6 +4,8 @@ const builtin = @import("builtin");
 const math = std.math;
 const rand = std.Random;
 
+// TODO: RENAME THIS FILE TO UTILS
+
 pub const DEBUG_PRINT: bool = false;
 
 pub const Point = struct { x: f64, y: f64 };

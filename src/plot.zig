@@ -33,7 +33,7 @@ pub fn line_plot(x_in: []const f32, y: []const f32, allocator: std.mem.Allocator
     defer svg.deinit();
 
     std.debug.print("line_plot out\n", .{});
-    var file = try std.fs.cwd().createFile("line_plot.svg", .{});
+    var file = try std.fs.cwd().createFile("Data/line_plot.svg", .{});
     defer file.close();
 
     try svg.writeTo(file.writer());
@@ -57,7 +57,7 @@ pub fn scatter_plot(x_in: []const f32, y: []const f32, allocator: std.mem.Alloca
     defer svg.deinit();
 
     std.debug.print("scatter_plot out\n", .{});
-    var file = try std.fs.cwd().createFile("scatter_plot.svg", .{});
+    var file = try std.fs.cwd().createFile("Data/scatter_plot.svg", .{});
     defer file.close();
 
     try svg.writeTo(file.writer());

@@ -10,8 +10,6 @@ const Q1 = @import("Q1_Temp_Sim.zig");
 const ArrayList = std.ArrayList;
 const os = std.os;
 
-const g_QuarantineOpen: bool = false;
-
 pub fn main() !void {
     global.Init();
     try teamData.InitData();
@@ -192,13 +190,8 @@ pub fn Test_TeamData() void {
 }
 
 pub fn create_graph_from_csv(test_name: []const u8) !void {
-    if (comptime !g_QuarantineOpen)
-        return;
-
-    // const zandas = @import("zandas.zig");
-    // const plot = @import("plot.zig");
-    const zandas = null;
-    const plot = null;
+    const zandas = @import("zandas.zig");
+    const plot = @import("plot.zig");    
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
