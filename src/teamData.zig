@@ -1,9 +1,10 @@
 const std = @import("std");
 
-const TEAM_NAMES = [_][]const u8{ "Boston Red Socks", "Boston Blue Socks", "Boston Green Socks"};
-const SHOT_COUNTS = [_]usize{ 5, 6, 1};
-const SHOTS_ON_TARGET_COUNTS = [_]usize{ 1, 2, 1};
-const SAVES_COUNT = [_]usize{5, 3, 6};
+const TEAM_NAMES = [_][]const u8{ "Boston Red Socks", "Boston Blue Socks", "Boston Green Socks" };
+const SHOT_COUNTS = [_]usize{ 5, 6, 1 };
+const SHOTS_ON_TARGET_COUNTS = [_]usize{ 1, 2, 1 };
+const SAVES_COUNT = [_]usize{ 5, 3, 6 };
+const POINTS_COUNT = [_]usize{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 var g_teamNamesHashmap: std.StringHashMap(usize) = undefined;
 var g_savePercents: []f64 = undefined;
@@ -15,7 +16,7 @@ pub fn InitData() !void {
     for (TEAM_NAMES) |name| {
         try g_teamNamesHashmap.put(name, i);
         i += 1;
-    }    
+    }
 
     g_savePercents = try std.heap.page_allocator.alloc(f64, SAVES_COUNT.len);
     for (0..SAVES_COUNT.len) |j| {

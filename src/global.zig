@@ -1,4 +1,3 @@
-
 const std = @import("std");
 const builtin = @import("builtin");
 const math = std.math;
@@ -15,13 +14,12 @@ var g_isReleaseMode: bool = undefined;
 var g_initialised: bool = false;
 
 pub fn Init() void {
-
     const releaseMode = builtin.mode;
     g_isReleaseMode = switch (releaseMode) {
         .Debug => false,
         .ReleaseFast => true,
         .ReleaseSafe => true,
-        .ReleaseSmall => true
+        .ReleaseSmall => true,
     };
 
     const seed: i64 = std.time.milliTimestamp();

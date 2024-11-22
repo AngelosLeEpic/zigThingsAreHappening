@@ -87,7 +87,6 @@ fn Test_GetRandFromNormalDistribution() !void {
         if (global.DEBUG_PRINT)
             std.debug.print("px={},py={}\n", .{ p.x, p.y });
 
-
         p = dist.GetRandPointFromNormalDistribution(p, 0, 1);
 
         try writer.print("{d},{d}\n", .{ p.x, p.y });
@@ -152,11 +151,7 @@ fn Test_Poisson() !void {
             std.debug.print("{x},", .{i});
     }
 
-<<<<<<< HEAD
-try create_graph_from_csv("TestPoisson");
-=======
     try create_graph_from_csv("TestPoisson");
->>>>>>> e43877915ada0e7e95f7544d99916cb6ce5bcd74
 }
 
 pub fn Test_DistributionsClasses() !void {
@@ -217,7 +212,7 @@ pub fn create_graph_from_csv(test_name: []const u8) !void {
     var df = try zandas.csv_to_df(f32, file_name.items, allocator);
     defer df.deinit();
 
-    // plotting data    
+    // plotting data
 
     const x = df.get_col(0).items;
     const y = df.get_col(1).items;
