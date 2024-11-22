@@ -97,7 +97,7 @@ fn Test_Q1() !void {
     var Results: ArrayList(Q1.Q1Results) = undefined;
     const TestDensity: u32 = 1000;
     const N: u32 = 100;
-    const StdDev: comptime_float = 2.3;
+    const StdDev: f64 = 2.3;
 
     for (0..N) |x| {
         const i: i64 = @intCast(x);
@@ -108,7 +108,6 @@ fn Test_Q1() !void {
     // not sure how to write results, should each MCS get its own file? This would result into 1000 csv files
     // but if I keep it all in one file, how will I sort this to seperate each run of the simulation?
     // TODO
-
     const currentWD = std.fs.cwd();
     const file = try currentWD.createFile("Data/Q1.csv", .{ .truncate = true });
     const writer = file.writer();
