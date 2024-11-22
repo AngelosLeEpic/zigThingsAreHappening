@@ -1,5 +1,5 @@
 # ZigMasters.co
 # zigThingsAreHappening
 
-![normal](saved_normal_distribution.svg)
-![poisson](saved_poisson_distribution.svg)
+![normal](image/saved_normal_distribution.svg)
+![poisson](image/saved_poisson_distribution.svg)
