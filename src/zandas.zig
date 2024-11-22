@@ -26,7 +26,6 @@ const Dataframe = struct {
         };
     }
 
-    // TODO: FIX
     pub fn get(self: *Self, row: usize, col: usize) DataTypes {
         return self.data.items[col].data.items[row];
     }
