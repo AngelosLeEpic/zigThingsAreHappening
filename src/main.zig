@@ -152,13 +152,7 @@ fn Test_Poisson() !void {
             std.debug.print("{x},", .{i});
     }
 
-<<<<<<< HEAD
-    file.close();
-
-
-    return;
-=======
-    try create_graph_from_csv("TestPoisson");
+try create_graph_from_csv("TestPoisson");
 }
 
 pub fn Test_DistributionsClasses() !void {
@@ -225,5 +219,4 @@ pub fn create_graph_from_csv(test_name: []const u8) !void {
     const y = df.get_col(1).items;
 
     try plot.scatter_plot(x, y, allocator);
->>>>>>> 1251f06ae5aab36e1c928b96562e77b2a87d19a8
 }
