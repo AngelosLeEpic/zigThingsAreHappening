@@ -4,7 +4,53 @@ const rand = std.Random;
 
 const global = @import("global.zig"); 
 
-pub fn GetRandFromNormalDistributionSingle(mean: f64, stdDev: f64, seed: c_int) f64 {
+const DistributionType = enum {
+    NORMAL, POISSON, UNIFORM
+};
+
+const Distribution = struct {
+    m_Mean : f64 = 0.0,
+    m_StdDev : f64 = 0.0,
+    m_Rate : f64 = 0.0,
+
+    m_Type : DistributionType,
+
+    pub fn GetRandVal(this: *const Distribution) f64 {
+        if (this.m_Type == DistributionType.NORMAL)
+            return GetRandFromNormalDistributionSingle(this.m_Mean, this.m_StdDev);
+
+        if (this.m_Type == DistributionType.POISSON)
+            return GetRandFromPoissonDistribution(this.m_Rate);
+
+        if (this.m_Type == DistributionType.UNIFORM)
+            return -1;
+
+        return -1;
+    }    
+};
+
+pub fn CreateNormalDist(mean : f64, stdDev : f64, allocator : std.mem.Allocator) !*Distribution {
+    var dist = try allocator.create(Distribution);
+    dist.m_Mean = mean;
+    dist.m_StdDev = stdDev;
+    dist.m_Type = DistributionType.NORMAL;
+    return dist;
+}
+
+pub fn CreatePoissonDist(rate : f64, allocator : std.mem.Allocator) !*Distribution {
+    var dist = try allocator.create(Distribution);
+    dist.m_Rate = rate;
+    dist.m_Type = DistributionType.POISSON;
+    return dist;
+}
+
+//======================================================
+
+pub fn GetRandFromNormalDistributionSingle(mean: f64, stdDev: f64) f64 {
+    return GetRandFromNormalDistributionSingleWithSeed(mean, stdDev, global.GetTrueRandomU64());
+}
+
+pub fn GetRandFromNormalDistributionSingleWithSeed(mean: f64, stdDev: f64, seed: u64) f64 {
     var rng = rand.DefaultPrng.init(seed);
     var rando = rng.random();
 
@@ -18,7 +64,7 @@ pub fn GetRandFromNormalDistributionSingle(mean: f64, stdDev: f64, seed: c_int) 
     return p.x;
 }
 
-pub fn GetRandsFromNormalDistribution(N: c_int, mean: f64, stdDev: f64, seed: c_int) std.ArrayList(f64) {
+pub fn GetRandsFromNormalDistribution(N: i64, mean: f64, stdDev: f64, seed: u64) std.ArrayList(f64) {
     var rng = rand.DefaultPrng.init(seed);
     var rando = rng.random();
 
@@ -58,12 +104,16 @@ pub fn GetRandPointFromNormalDistribution(p: global.Point, mean: f64, stdDev: f6
     };
 }
 
-pub fn GetRandFromPoissonDistribution(lambda: f64, seed: c_int) f64 {
+pub fn GetRandFromPoissonDistribution(lambda: f64) f64 {
+    return GetRandFromPoissonDistributionWithSeed(lambda, global.GetTrueRandomU64());
+}
+
+pub fn GetRandFromPoissonDistributionWithSeed(lambda: f64, seed: u64) f64 {
     var rng = rand.DefaultPrng.init(seed);
     var rando = rng.random();
     return -math.log(f64, 10, rando.float(f64)) / lambda;
 }
 
-pub fn ConvertRandToPoissonDistribution(lambda: f64, randVal: f64) f64 {
+pub fn ConvertRandToPoissonDistribution(lambda: f64, randVal: u64) f64 {
     return -math.log(f64, 10, randVal) / lambda;
 }
