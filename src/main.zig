@@ -167,11 +167,7 @@ pub fn Test_DistributionsClasses() !void {
     for (0..MAX_RUNS) |_| {
         const r1 = normDist.GetRandVal();
         const r2 = normDist.GetRandVal();
-<<<<<<< HEAD
-        try writer.print("{d}, {d}\n", .{ r1, r2 });
-=======
         try writer.print("{d},{d}\n", .{ r1, r2 });
->>>>>>> main
     }
 }
 
@@ -186,8 +182,6 @@ pub fn Test_TeamData() void {
         std.debug.print("TeamName={s}, Shots={}, OnTarget={}, Saves={}\n\n", .{ teamName, shots, shotsOnTarget, saves });
     }
 }
-<<<<<<< HEAD
-=======
 
 pub fn create_graph_from_csv(test_name: []const u8) !void {
     const zandas = @import("zandas.zig");
@@ -214,4 +208,3 @@ pub fn create_graph_from_csv(test_name: []const u8) !void {
 
     try plot.scatter_plot(x, y, allocator);
 }
->>>>>>> main
