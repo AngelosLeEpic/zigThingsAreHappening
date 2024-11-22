@@ -64,6 +64,7 @@ pub fn main() !void {
 }
 
 fn Test_GetRandFromNormalDistribution() !void {
+    // writing data
     var rng = rand.DefaultPrng.init(123456789);
     var rando = rng.random();
     var p = global.Point{ .x = rando.floatNorm(f64), .y = rando.floatNorm(f64) };
@@ -71,25 +72,25 @@ fn Test_GetRandFromNormalDistribution() !void {
     const currentWD = std.fs.cwd();
 
     const file = try currentWD.createFile("Data/TestNormal.csv", .{ .truncate = true });
+    defer file.close();
     const writer = file.writer();
-    try writer.print("Index, Value\n", .{});
+    try writer.print("Index,Value\n", .{});
 
     const MAX_RUNS: c_int = 10000;
     for (0..MAX_RUNS) |i| {
         if (global.DEBUG_PRINT)
-            std.debug.print("px={}, py={}\n", .{ p.x, p.y });
+            std.debug.print("px={},py={}\n", .{ p.x, p.y });
 
         p = dist.GetRandPointFromNormalDistribution(p, 0, 1);
 
-        try writer.print("{d}, {d}\n", .{ p.x, p.y });
+        try writer.print("{d},{d}\n", .{ p.x, p.y });
         //try writer.print("{d}, {d}\n", .{ i, p.x });
         //try writer.print("{d}, {d}\n", .{ i, p.y });
 
         if (global.DEBUG_PRINT)
             std.debug.print("{x},", .{i});
     }
-
-    file.close();
+    try create_graph_from_csv("TestNormal");
 }
 
 fn Test_Q1() !void {
@@ -130,31 +131,31 @@ fn Test_Poisson() !void {
     const currentWD = std.fs.cwd();
 
     const file = try currentWD.createFile("Data/TestPoisson.csv", .{ .truncate = true });
+    defer file.close();
     const writer = file.writer();
-    try writer.print("Val1, Val2\n", .{});
+    try writer.print("Val1,Val2\n", .{});
 
     const MAX_RUNS: c_int = 10000;
     for (0..MAX_RUNS) |i| {
         const poisson1 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
         const poisson2 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
 
-        try writer.print("{d}, {d}\n", .{ poisson1, poisson2 });
+        try writer.print("{d},{d}\n", .{ poisson1, poisson2 });
 
         if (global.DEBUG_PRINT)
             std.debug.print("{x},", .{i});
     }
 
-    file.close();
-
-    return;
+    try create_graph_from_csv("TestPoisson");
 }
 
 pub fn Test_DistributionsClasses() !void {
     const currentWD = std.fs.cwd();
 
     const file = try currentWD.createFile("Data/TestNormalDistClass.csv", .{ .truncate = true });
+    defer file.close();
     const writer = file.writer();
-    try writer.print("Value1, Value2\n", .{});
+    try writer.print("Value1,Value2\n", .{});
 
     const MAX_RUNS: c_int = 1000;
 
@@ -166,10 +167,12 @@ pub fn Test_DistributionsClasses() !void {
     for (0..MAX_RUNS) |_| {
         const r1 = normDist.GetRandVal();
         const r2 = normDist.GetRandVal();
+<<<<<<< HEAD
         try writer.print("{d}, {d}\n", .{ r1, r2 });
+=======
+        try writer.print("{d},{d}\n", .{ r1, r2 });
+>>>>>>> main
     }
-
-    file.close();
 }
 
 pub fn Test_TeamData() void {
@@ -183,3 +186,32 @@ pub fn Test_TeamData() void {
         std.debug.print("TeamName={s}, Shots={}, OnTarget={}, Saves={}\n\n", .{ teamName, shots, shotsOnTarget, saves });
     }
 }
+<<<<<<< HEAD
+=======
+
+pub fn create_graph_from_csv(test_name: []const u8) !void {
+    const zandas = @import("zandas.zig");
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer {
+        const deinit_status = gpa.deinit();
+        if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
+    }
+    const allocator = gpa.allocator();
+
+    var file_name = std.ArrayList(u8).init(allocator);
+    defer file_name.deinit();
+    try file_name.writer().print("Data/{s}.csv", .{test_name});
+
+    // reading data
+    var df = try zandas.csv_to_df(f32, file_name.items, allocator);
+    defer df.deinit();
+
+    // plotting data
+    const plot = @import("plot.zig");
+
+    const x = df.get_col(0).items;
+    const y = df.get_col(1).items;
+
+    try plot.scatter_plot(x, y, allocator);
+}
+>>>>>>> main
