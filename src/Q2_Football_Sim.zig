@@ -47,12 +47,12 @@ pub fn SimulateGame(teamAIndex: i32, teamBIndex: i32) GameSimResult {
     // Simulate the game, I think you know it better than me
     // Return the result
 
-    var teamAShotsTaken: i32 = dists.shotDists[teamAindex].getRandomValue;              //Normal distributions : Clamped to -5 to +10 of the teams real life average
-    var teamBShotsTaken: i32 = dists.shotDists[teamBindex].getRandomValue;
-    var teamAShotsOnTarget: i32 = dists.shotOnTargetDists[teamAindex].getRandomValue;   //Normal distributions : Clamped to the number of shots taken by team in sim (room to clamp further if wacky stats occur):
-    var teamBShotsOnTarget: i32 = dists.shotOnTargetDists[teamBindex].getRandomValue;
-    var teamASavePercentage: f32 = dists.savePercentageDists[teamAindex].getRandomValue; //Normal distributions : Clamped to -5 to +10 of the teams real life average
-    var teamBSavePercentage: f32 = dists.savePercentageDists[teamBindex].getRandomValue;
+    var teamAShotsTaken: i32 = dists.shotDists[teamAIndex].getRandomValue;              //Normal distributions : Clamped to -5 to +10 of the teams real life average
+    var teamBShotsTaken: i32 = dists.shotDists[teamBIndex].getRandomValue;
+    var teamAShotsOnTarget: i32 = dists.shotOnTargetDists[teamAIndex].getRandomValue;   //Normal distributions : Clamped to the number of shots taken by team in sim (room to clamp further if wacky stats occur):
+    var teamBShotsOnTarget: i32 = dists.shotOnTargetDists[teamBIndex].getRandomValue;
+    var teamASavePercentage: f32 = dists.savePercentageDists[teamAIndex].getRandomValue; //Normal distributions : Clamped to -5 to +10 of the teams real life average
+    var teamBSavePercentage: f32 = dists.savePercentageDists[teamBIndex].getRandomValue;
     var teamAShotOnTargetPercentage : f32 = teamAShotsOnTarget / teamAShotsTaken * 100;
     var teamBShotOnTargetPercentage : f32 = teamBShotsOnTarget / teamBShotsTaken * 100;
     var teamAGoals : i32 = 0;
