@@ -5,32 +5,39 @@ const ArrayList = std.ArrayList;
 
 const utils = @import("distributions.zig");
 
-const Q1Results = struct {
-    var temperatures: []f64 = {};
-    var maxTemp: f64 = 0;
+pub const Q1Results = struct {
+    porpotion: f64 = 0.0,
+    maxTemp: f64 = 0.0,
 };
 
+// Simulates just one change in the temperature for running the monte carlo simulations
 pub fn simulateTemperatureChange(temp: f64, deltaTime: f64) f64 {
-    const seed = 0.164326;
-    return temp + utils.GetRandFromNormalDistribution(seed, seed, 0, deltaTime);
+    return temp + utils.GetRandFromNormalDistributionSingle(0, deltaTime);
 }
 
-pub fn simulateQ1(N: c_int, deltaTime: f64, temperatures: ArrayList(f64)) Q1Results {
-    var count: c_int = 0;
-    var maxTemp = -999;
+//runs a single monte carlo simulation for Q1, the temperature is changed a total of N times
+// N can be said to represent the depth of that simulation
+// returns the porpotion and MaxTemperature seen
+pub fn simulateQ1(N: i64, deltaTime: f64) Q1Results {
+    var count: i64 = 0;
+    var maxTemp: f64 = -9999999999999.0;
     var temp: f64 = 0;
+
+    var aboveZero: i64 = 0;
     while (count < N) {
         temp = simulateTemperatureChange(temp, deltaTime);
-        temperatures.addOne(temp);
+
+        if (temp > 0) {
+            aboveZero += 1;
+        }
         if (temp > maxTemp) {
             maxTemp = temp;
         }
         count += 1;
     }
+    const finalPorpotion: f64 = @as(f64, @floatFromInt(aboveZero)) / @as(f64, @floatFromInt(N));
+    // std.debug.print("Test complete, maxTemp: {}, porpostion: {}\n", .{ maxTemp, aboveZero });
 
-    const out: Q1Results = {
-        .temperatures == temperatures;
-        .maxTempL == maxTemp;
-    };
-    return out;
+    const result = Q1Results{ .porpotion = finalPorpotion, .maxTemp = maxTemp };
+    return result;
 }
