@@ -51,7 +51,7 @@ pub fn scatter_plot(x_in: []const f32, y: []const f32, allocator: std.mem.Alloca
         },
     });
     defer figure.deinit();
-    try figure.addPlot(Scatter{ .x = x, .y = y, .style = .{ .color = rgb.BLUE, .radius = 4.0, .shape = .circle } });
+    try figure.addPlot(Scatter{ .x = x, .y = y, .style = .{ .color = rgb.BLUE, .radius = 1.0, .shape = .circle } });
 
     var svg = try figure.show();
     defer svg.deinit();
