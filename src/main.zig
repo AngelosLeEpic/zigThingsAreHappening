@@ -9,6 +9,8 @@ const teamData = @import("teamData.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
 const ArrayList = std.ArrayList;
 const os = std.os;
+const Q2 = @import("Q2_Football_Sim.zig");
+const print = std.debug.print;
 
 pub fn main() !void {
     global.Init();
@@ -53,6 +55,12 @@ pub fn main() !void {
     if (std.mem.eql(u8, args[1], "testTeamData")) {
         std.debug.print("Testing team data\n", .{});
         Test_TeamData();
+        return;
+    }
+
+    if (std.mem.eql(u8, args[1], "testQ2")) {
+        std.debug.print("Testing team data\n", .{});
+        Q2_Test();
         return;
     }
 
@@ -204,4 +212,9 @@ pub fn create_graph_from_csv(test_name: []const u8, output_file: []const u8) !vo
     const y = df.get_col(1).items;
 
     try plot.scatter_plot(x, y, output_file, allocator);
+}
+
+pub fn Q2_Test() void {
+    const nSims = 100;
+    print(Q2.RunSimulation(nSims), {});
 }
