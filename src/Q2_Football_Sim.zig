@@ -1,6 +1,7 @@
 const std = @import("std");
 const math = std.math;
 const rand = std.Random;
+const ArrayList = std.ArrayList;
 
 const utils = @import("main.zig");
 const dists = @import("distributions.zig");
@@ -17,10 +18,11 @@ const SavePercentType = dists.DistributionType.NORMAL;
 const GameSimResult = enum { TEAM_A_WINS, TEAM_B_WINS, DRAW };
 var PointsCount = []i32{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
+ 
 const SimDists = struct {
-    shotDists: []dists.Distribution = {},
-    targetDists: []dists.Distribution = {},
-    saveDists: []dists.Distribution = {},
+     shotDists: ArrayList(dists.Distribution),
+     targetDists: ArrayList(dists.Distribution),
+   
 };
 
 ///References: https://en.wikipedia.org/wiki/Quicksort
@@ -50,7 +52,19 @@ pub fn partition(A: []i32, lo: usize, hi: usize) usize {
 
 pub fn RunSimulation(nSims: i32) ![teamData.GetTeamCount()][]u8 {
     // Run the presim to generate distributions
-    const simData = CalculatePreSim();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer {
+        const deinit_status = gpa.deinit();
+        if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
+    }
+   
+   const Q2Allocator = std.heap.page_allocator;
+   var simData: SimDists = SimDists{
+         .shotDists = ArrayList(dists.Distribution).init(Q2Allocator),
+         .targetDists= ArrayList(dists.Distribution).init(Q2Allocator)
+    };
+
+    simData = CalculatePreSim();
     for (0..nSims) |_| {
         for (0..teamData.GetTeamCount()) |TeamA| {
             for (0..teamData.GetTeamCount()) |TeamB| {
@@ -88,14 +102,7 @@ pub fn RunSimulation(nSims: i32) ![teamData.GetTeamCount()][]u8 {
     // Return the winners of the function in whatever way you feel fits best
 }
 
-pub fn create_SimDists(allocator: std.mem.Allocator) !*SimDists {
-    var simDist = try allocator.alloc(SimDists, 2);
-    simDist.shotDists = try allocator.alloc(dists.Distribution, teamData.GetTeamCount());
-    simDist.targetDists = try allocator.alloc(dists.Distribution, teamData.GetTeamCount());
-    return simDist;
-}
-
-pub fn CalculatePreSim() !*SimDists {
+pub fn CalculatePreSim() !SimDists {
     const gamesPlayed: i32 = 12;
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
@@ -103,19 +110,22 @@ pub fn CalculatePreSim() !*SimDists {
         if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
     }
     const allocator = gpa.allocator();
-    var Distributions = try create_SimDists(allocator);
-
+    const Q2Allocator = std.heap.page_allocator;
+    var simData: SimDists = SimDists{
+         .shotDists = ArrayList(dists.Distribution).init(Q2Allocator),
+         .targetDists= ArrayList(dists.Distribution).init(Q2Allocator)
+    };
     // Given a hardcoded dist type assignment for each stat. Create dist lists based on team data
     for (0..teamData.GetTeamCount()) |x| {
         const shotsMean: f32 = teamData.GetShotCount(x) / gamesPlayed;
         const targetsMean: f32 = teamData.GetShotsOnTargetCount(x) / gamesPlayed;
         const stdDev: f32 = 2;
 
-        Distributions.shotDists[x] = dists.createNormalDist(shotsMean, stdDev, allocator);
-        Distributions.targetDists[x] = dists.createNormalDist(targetsMean, stdDev, allocator);
+        simData.shotDists.append(dists.CreateNormalDist(shotsMean, stdDev, allocator));
+        simData.targetDists.append(dists.CreateNormalDist(targetsMean, stdDev, allocator));
     }
 
-    return Distributions;
+    return simData;
     // Based on ShotDistType, TargetDistType, etc make and store a Distribution struct of the correct type for every team for every stat
     // e.g. Make a "Distribution[] shotDists" of size teamCount. Use teamdata.zig!!
     // Use team index to access the array
@@ -141,7 +151,7 @@ pub fn SimulateGame(teamAIndex: i32, teamBIndex: i32, simData: *SimDists) GameSi
     // Simulate the game, I think you know it better than me
     // Return the result
     const teamAShotsTaken: i32 = simData.shotDists[teamAIndex].getRandVal();
-    const teamBShotsTaken: i32 = simData.shotDist[teamBIndex].getRandVal();
+    const teamBShotsTaken: i32 = simData.shotDists[teamBIndex].getRandVal();
     const teamAShotsOnTarget: i32 = simData.targetDists[teamAIndex].getRandVal(); //Normal distributions : Clamped to the number of shots taken by team in sim (room to clamp further if wacky stats occur):
     const teamBShotsOnTarget: i32 = simData.targetDists[teamBIndex].getRandVal();
     const teamASavePercentage: f32 = teamData.GetSavesCount(teamAIndex) / teamAShotsOnTarget; //Normal distributions : Clamped to -5 to +10 of the teams real life average
