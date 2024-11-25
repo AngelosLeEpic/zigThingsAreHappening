@@ -16,17 +16,17 @@ const TargetDistType = dists.DistributionType.NORMAL;
 const SavePercentType = dists.DistributionType.NORMAL;
 
 const GameSimResult = enum { TEAM_A_WINS, TEAM_B_WINS, DRAW };
-var PointsCount = []i32{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+var PointsCount = [_]i32{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
  
 const SimDists = struct {
-     shotDists: ArrayList(dists.Distribution),
-     targetDists: ArrayList(dists.Distribution),
+     shotDists: ArrayList(*dists.Distribution),
+     targetDists: ArrayList(*dists.Distribution),
    
 };
 
 ///References: https://en.wikipedia.org/wiki/Quicksort
-pub fn sort(A: []i32, lo: usize, hi: usize) []i32 {
+pub fn sort(A: []i32, lo: usize, hi: usize) void {
     if (lo < hi) {
         const p = partition(A, lo, hi);
         sort(A, lo, @min(p, p -% 1));
@@ -50,7 +50,7 @@ pub fn partition(A: []i32, lo: usize, hi: usize) usize {
     return i;
 }
 
-pub fn RunSimulation(nSims: i32) ![teamData.GetTeamCount()][]u8 {
+pub fn RunSimulation(nSims: usize) !ArrayList([]const u8) {
     // Run the presim to generate distributions
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
@@ -60,11 +60,11 @@ pub fn RunSimulation(nSims: i32) ![teamData.GetTeamCount()][]u8 {
    
    const Q2Allocator = std.heap.page_allocator;
    var simData: SimDists = SimDists{
-         .shotDists = ArrayList(dists.Distribution).init(Q2Allocator),
-         .targetDists= ArrayList(dists.Distribution).init(Q2Allocator)
+         .shotDists = ArrayList(*dists.Distribution).init(Q2Allocator),
+         .targetDists= ArrayList(*dists.Distribution).init(Q2Allocator)
     };
 
-    simData = CalculatePreSim();
+    simData = try CalculatePreSim();
     for (0..nSims) |_| {
         for (0..teamData.GetTeamCount()) |TeamA| {
             for (0..teamData.GetTeamCount()) |TeamB| {
@@ -80,17 +80,22 @@ pub fn RunSimulation(nSims: i32) ![teamData.GetTeamCount()][]u8 {
             }
         }
     }
-    var sortedPointsCount: [teamData.GetTeamCount()]i32 = {};
-    var sortedTeams: [teamData.GetTeamCount()][]u8 = {};
-    for (0..teamData.GetTeamCount()) |i| {
-        sortedPointsCount[i] = PointsCount[i];
+    for(0..20)|i|{
+        Q2Allocator.destroy(simData.shotDists.items[i]);
+        Q2Allocator.destroy(simData.targetDists.items[i]);
     }
-    sortedPointsCount = sort(sortedPointsCount, 1, 20);
+       
+    var sortedPointsCount = ArrayList(i32).init(Q2Allocator);
+    var sortedTeams = ArrayList([] const u8).init(Q2Allocator);
+    for (0..teamData.GetTeamCount()) |i| {
+       try sortedPointsCount.append(PointsCount[i]);
+    }
+    sort(sortedPointsCount.items, 1, 20);
     for (0..teamData.GetTeamCount()) |i| {
         for (i..teamData.GetTeamCount()) |j| {
-            if (sortedPointsCount[i] == PointsCount[j]) {
-                sortedTeams[i] = teamData.TEAM_NAMES[j];
-                break;
+            if (sortedPointsCount.items[i] == PointsCount[j]) {
+                try sortedTeams.append(teamData.GetTeamName(j));
+               break;
             }
         }
     }
@@ -103,7 +108,7 @@ pub fn RunSimulation(nSims: i32) ![teamData.GetTeamCount()][]u8 {
 }
 
 pub fn CalculatePreSim() !SimDists {
-    const gamesPlayed: i32 = 12;
+    const gamesPlayed: f64 = 12;
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
         const deinit_status = gpa.deinit();
@@ -112,17 +117,20 @@ pub fn CalculatePreSim() !SimDists {
     const allocator = gpa.allocator();
     const Q2Allocator = std.heap.page_allocator;
     var simData: SimDists = SimDists{
-         .shotDists = ArrayList(dists.Distribution).init(Q2Allocator),
-         .targetDists= ArrayList(dists.Distribution).init(Q2Allocator)
+         .shotDists = ArrayList(*dists.Distribution).init(Q2Allocator),
+         .targetDists= ArrayList(*dists.Distribution).init(Q2Allocator)
     };
     // Given a hardcoded dist type assignment for each stat. Create dist lists based on team data
     for (0..teamData.GetTeamCount()) |x| {
-        const shotsMean: f32 = teamData.GetShotCount(x) / gamesPlayed;
-        const targetsMean: f32 = teamData.GetShotsOnTargetCount(x) / gamesPlayed;
-        const stdDev: f32 = 2;
+        const shotCount: f64 = @floatFromInt(teamData.GetShotCount(x));
+        const targetsCount: f64 = @floatFromInt(teamData.GetShotsOnTargetCount(x));
+        const shotsMean: f64 = shotCount / gamesPlayed;
+        const targetsMean: f64 = targetsCount / gamesPlayed;
+        const stdDev: f64 = 2;
 
-        simData.shotDists.append(dists.CreateNormalDist(shotsMean, stdDev, allocator));
-        simData.targetDists.append(dists.CreateNormalDist(targetsMean, stdDev, allocator));
+        
+        try simData.shotDists.append(try dists.CreateNormalDist(shotsMean, stdDev, allocator));
+        try simData.targetDists.append(try dists.CreateNormalDist(targetsMean, stdDev, allocator));
     }
 
     return simData;
@@ -134,8 +142,8 @@ pub fn CalculatePreSim() !SimDists {
 
 pub fn GetGoalsScored(shotsTaken: f64, shotOnTargetPercentage: f64, opponentSavePercentage: f64) i32 {
     var goals: i32 = 0;
-
-    for (0..shotsTaken) |_| {
+    const shotsTakenLoop :usize = @intFromFloat(shotsTaken);
+    for (0..shotsTakenLoop) |_| {
         if (dists.RandSuccessChance(shotOnTargetPercentage)) {
             if (dists.RandSuccessChance(opponentSavePercentage)) {
                 goals += 1;
@@ -146,18 +154,20 @@ pub fn GetGoalsScored(shotsTaken: f64, shotOnTargetPercentage: f64, opponentSave
 }
 //Simulate a prem game through stats given,
 
-pub fn SimulateGame(teamAIndex: i32, teamBIndex: i32, simData: *SimDists) GameSimResult {
+pub fn SimulateGame(teamAIndex: usize, teamBIndex: usize, simData: SimDists) GameSimResult {
     // Do as below to randomly generate values from the distributions you made in PreSim
     // Simulate the game, I think you know it better than me
     // Return the result
-    const teamAShotsTaken: i32 = simData.shotDists[teamAIndex].getRandVal();
-    const teamBShotsTaken: i32 = simData.shotDists[teamBIndex].getRandVal();
-    const teamAShotsOnTarget: i32 = simData.targetDists[teamAIndex].getRandVal(); //Normal distributions : Clamped to the number of shots taken by team in sim (room to clamp further if wacky stats occur):
-    const teamBShotsOnTarget: i32 = simData.targetDists[teamBIndex].getRandVal();
-    const teamASavePercentage: f32 = teamData.GetSavesCount(teamAIndex) / teamAShotsOnTarget; //Normal distributions : Clamped to -5 to +10 of the teams real life average
-    const teamBSavePercentage: f32 = teamData.GetSavesCount(teamBIndex) / teamBShotsOnTarget;
-    const teamAShotOnTargetPercentage: f32 = teamAShotsOnTarget / teamAShotsTaken * 100;
-    const teamBShotOnTargetPercentage: f32 = teamBShotsOnTarget / teamBShotsTaken * 100;
+    const teamASaves: f64 = @floatFromInt(teamData.GetSavesCount(teamAIndex));
+    const teamBSaves: f64 = @floatFromInt(teamData.GetSavesCount(teamBIndex));
+    const teamAShotsTaken: f64 = simData.shotDists.items[teamAIndex].GetRandVal();
+    const teamBShotsTaken: f64 = simData.shotDists.items[teamBIndex].GetRandVal();
+    const teamAShotsOnTarget: f64 = simData.targetDists.items[teamAIndex].GetRandVal(); //Normal distributions : Clamped to the number of shots taken by team in sim (room to clamp further if wacky stats occur):
+    const teamBShotsOnTarget: f64 = simData.targetDists.items[teamBIndex].GetRandVal();
+    const teamASavePercentage: f64 = teamASaves / teamAShotsOnTarget; //Normal distributions : Clamped to -5 to +10 of the teams real life average
+    const teamBSavePercentage: f64 = teamBSaves / teamBShotsOnTarget;
+    const teamAShotOnTargetPercentage: f64 = teamAShotsOnTarget / teamAShotsTaken * 100;
+    const teamBShotOnTargetPercentage: f64 = teamBShotsOnTarget / teamBShotsTaken * 100;
 
     const teamAGoals: i32 = GetGoalsScored(teamAShotsTaken, teamAShotOnTargetPercentage, teamBSavePercentage);
     const teamBGoals: i32 = GetGoalsScored(teamBShotsTaken, teamBShotOnTargetPercentage, teamASavePercentage);
@@ -168,8 +178,9 @@ pub fn SimulateGame(teamAIndex: i32, teamBIndex: i32, simData: *SimDists) GameSi
     if (teamAGoals < teamBGoals) {
         return GameSimResult.TEAM_B_WINS;
     }
-    if (teamAGoals == teamBGoals) {
-        return GameSimResult.DRAW;
-    }
-    return void;
+  
+    return GameSimResult.DRAW;
+    
+   
+
 }
