@@ -1,7 +1,10 @@
+
 const std = @import("std");
 const builtin = @import("builtin");
 const math = std.math;
 const rand = std.Random;
+
+// TODO: RENAME THIS FILE TO UTILS
 
 pub const DEBUG_PRINT: bool = false;
 

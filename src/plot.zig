@@ -11,7 +11,7 @@ const ShapeMarker = plotlib.ShapeMarker;
 
 const SMOOTHING = 0.2;
 
-pub fn line_plot(x_in: []const f32, y: []const f32, allocator: std.mem.Allocator) !void {
+pub fn line_plot(x_in: []const f32, y: []const f32, file_path: []const u8, allocator: std.mem.Allocator) !void {
     const x: ?[]const f32 = x_in;
     var figure = Figure.init(allocator, .{
         .value_padding = .{
@@ -33,13 +33,14 @@ pub fn line_plot(x_in: []const f32, y: []const f32, allocator: std.mem.Allocator
     defer svg.deinit();
 
     std.debug.print("line_plot out\n", .{});
-    var file = try std.fs.cwd().createFile("line_plot.svg", .{});
+
+    var file = try std.fs.cwd().createFile(file_path, .{});
     defer file.close();
 
     try svg.writeTo(file.writer());
 }
 
-pub fn scatter_plot(x_in: []const f32, y: []const f32, allocator: std.mem.Allocator) !void {
+pub fn scatter_plot(x_in: []const f32, y: []const f32, file_path: []const u8, allocator: std.mem.Allocator) !void {
     const x: ?[]const f32 = x_in;
     var figure = Figure.init(allocator, .{
         .value_padding = .{
@@ -51,13 +52,13 @@ pub fn scatter_plot(x_in: []const f32, y: []const f32, allocator: std.mem.Alloca
         },
     });
     defer figure.deinit();
-    try figure.addPlot(Scatter{ .x = x, .y = y, .style = .{ .color = rgb.BLUE, .radius = 4.0, .shape = .circle } });
+    try figure.addPlot(Scatter{ .x = x, .y = y, .style = .{ .color = rgb.BLUE, .radius = 1.0, .shape = .circle } });
 
     var svg = try figure.show();
     defer svg.deinit();
 
     std.debug.print("scatter_plot out\n", .{});
-    var file = try std.fs.cwd().createFile("scatter_plot.svg", .{});
+    var file = try std.fs.cwd().createFile(file_path, .{});
     defer file.close();
 
     try svg.writeTo(file.writer());

@@ -10,8 +10,6 @@ const Q1 = @import("Q1_Temp_Sim.zig");
 const ArrayList = std.ArrayList;
 const os = std.os;
 
-const g_QuarantineOpen: bool = false;
-
 pub fn main() !void {
     global.Init();
     try teamData.InitData();
@@ -21,11 +19,7 @@ pub fn main() !void {
     } else std.debug.print("Running in Debug mode\n", .{});
 
     const args = try std.process.argsAlloc(std.heap.page_allocator);
-    var count: c_int = 0;
-    for (args, 0..) |arg, i| {
-        std.debug.print("arg {}: {s}\n", .{ i, arg });
-        count += 1;
-    }
+    const count: usize = args.len;
 
     if (count <= 1) {
         std.debug.print("Not enough args to run any function\n", .{});
@@ -92,7 +86,8 @@ fn Test_GetRandFromNormalDistribution() !void {
         if (global.DEBUG_PRINT)
             std.debug.print("{x},", .{i});
     }
-    try create_graph_from_csv("TestNormal");
+
+    try create_graph_from_csv("TestNormal", "Data/normal_scatter_plot.svg");
 }
 
 fn Test_Q1() !void {
@@ -102,15 +97,9 @@ fn Test_Q1() !void {
     const N: u32 = 100;
     const StdDev: f64 = 2.3;
 
-    for (0..N) |x| {
-        std.debug.print("performing test: {}\n", .{x});
+    for (0..N) |_| {
         try Results.append(Q1.simulateQ1(TestDensity, StdDev));
     }
-
-    // results stored in arrays, writting results
-    // not sure how to write results, should each MCS get its own file? This would result into 1000 csv files
-    // but if I keep it all in one file, how will I sort this to seperate each run of the simulation?
-    // TODO
 
     std.debug.print("tests run fine, writting results of Q1\n", .{});
 
@@ -126,6 +115,7 @@ fn Test_Q1() !void {
         // try writer.print("{f64},{f64} \n", .dataOut.porpotion, dataOut.maxTemp);
         try writer.print("{d},{d}\n", .{ dataOut.porpotion, dataOut.maxTemp });
     }
+    try create_graph_from_csv("Q1", "Data/q1_scatter_plot.svg");
 }
 
 fn Test_Poisson() !void {
@@ -152,7 +142,7 @@ fn Test_Poisson() !void {
             std.debug.print("{x},", .{i});
     }
 
-    try create_graph_from_csv("TestPoisson");
+    try create_graph_from_csv("TestPoisson", "Data/poisson_scatter_plot.svg");
 }
 
 pub fn Test_DistributionsClasses() !void {
@@ -189,14 +179,9 @@ pub fn Test_TeamData() void {
     }
 }
 
-pub fn create_graph_from_csv(test_name: []const u8) !void {
-    if (comptime !g_QuarantineOpen)
-        return;
-
-    // const zandas = @import("zandas.zig");
-    // const plot = @import("plot.zig");
-    const zandas = null;
-    const plot = null;
+pub fn create_graph_from_csv(test_name: []const u8, output_file: []const u8) !void {
+    const zandas = @import("zandas.zig");
+    const plot = @import("plot.zig");
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
@@ -218,5 +203,5 @@ pub fn create_graph_from_csv(test_name: []const u8) !void {
     const x = df.get_col(0).items;
     const y = df.get_col(1).items;
 
-    try plot.scatter_plot(x, y, allocator);
+    try plot.scatter_plot(x, y, output_file, allocator);
 }
