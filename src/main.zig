@@ -33,6 +33,12 @@ pub fn main() !void {
         return;
     }
 
+    if (std.mem.eql(u8, args[1], "testPoissonPDF")) {
+        std.debug.print("Testing poisson distribution PDF functionality\n", .{});
+        try Test_Poisson_PDF();
+        return;
+    }
+
     if (std.mem.eql(u8, args[1], "testNormal")) {
         std.debug.print("testing normal distribution functinality\n", .{});
         try Test_GetRandFromNormalDistribution();
@@ -204,4 +210,27 @@ pub fn create_graph_from_csv(test_name: []const u8, output_file: []const u8) !vo
     const y = df.get_col(1).items;
 
     try plot.scatter_plot(x, y, output_file, allocator);
+}
+
+// X - Lambda
+// Y - PoissonVal(X)
+pub fn Test_Poisson_PDF() !void {
+    const currentWD = std.fs.cwd();
+
+    const file = try currentWD.createFile("Data/TestPoissonPDF.csv", .{ .truncate = true });
+    defer file.close();
+    const writer = file.writer();
+    try writer.print("Lambda,Val\n", .{});
+
+    const LAMBDA_COUNT: i32 = 100;
+    const MAX_RUNS: i32 = 100;
+    for (1..LAMBDA_COUNT) |lambda| {
+        const lambdaF64: f64 = @floatFromInt(lambda);
+        for (0..MAX_RUNS) |_| {
+            const poisson = dist.GetRandFromPoissonDistribution(lambdaF64);
+            try writer.print("{d},{d}\n", .{ lambdaF64, poisson });
+        }        
+    }
+
+    try create_graph_from_csv("TestPoissonPDF", "Data/PoissonPDF_Scatter.svg");
 }
