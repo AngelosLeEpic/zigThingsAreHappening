@@ -11,7 +11,6 @@ const ArrayList = std.ArrayList;
 const os = std.os;
 const Q2 = @import("Q2_Football_Sim.zig");
 
-
 pub fn main() !void {
     global.Init();
     try teamData.InitData();
@@ -215,12 +214,12 @@ pub fn create_graph_from_csv(test_name: []const u8, output_file: []const u8) !vo
 }
 
 pub fn Q2_Test() !void {
-    const nSims:usize = 1;
+    const nSims: usize = 1000;
     const output = try Q2.RunSimulation(nSims);
 
-    for(0..9) |i| {
-        const string:[] const u8 = output.items[i] ;
-        std.debug.print("{s}" , .{string});
-         std.debug.print("{s}" , .{" "});
+    for (0..20) |i| {
+        const string: []const u8 = output.items[i];
+        std.debug.print("{s}\n", .{string});
+        // std.debug.print("{s}\n", .{" "});
     }
 }

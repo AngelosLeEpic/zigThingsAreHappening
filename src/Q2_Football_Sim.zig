@@ -18,11 +18,19 @@ const SavePercentType = dists.DistributionType.NORMAL;
 const GameSimResult = enum { TEAM_A_WINS, TEAM_B_WINS, DRAW };
 var PointsCount = [_]i32{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
- 
+const TeamSort = struct {
+    name: []const u8,
+    value: i32,
+};
+
+pub fn sort_team(context: void, a: TeamSort, b: TeamSort) bool {
+    _ = context;
+    return a.value < b.value;
+}
+
 const SimDists = struct {
-     shotDists: ArrayList(*dists.Distribution),
-     targetDists: ArrayList(*dists.Distribution),
-   
+    shotDists: ArrayList(*dists.Distribution),
+    targetDists: ArrayList(*dists.Distribution),
 };
 
 ///References: https://en.wikipedia.org/wiki/Quicksort
@@ -57,12 +65,9 @@ pub fn RunSimulation(nSims: usize) !ArrayList([]const u8) {
         const deinit_status = gpa.deinit();
         if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
     }
-   
-   const Q2Allocator = std.heap.page_allocator;
-   var simData: SimDists = SimDists{
-         .shotDists = ArrayList(*dists.Distribution).init(Q2Allocator),
-         .targetDists= ArrayList(*dists.Distribution).init(Q2Allocator)
-    };
+
+    const Q2Allocator = std.heap.page_allocator;
+    var simData: SimDists = SimDists{ .shotDists = ArrayList(*dists.Distribution).init(Q2Allocator), .targetDists = ArrayList(*dists.Distribution).init(Q2Allocator) };
 
     simData = try CalculatePreSim();
     for (0..nSims) |_| {
@@ -80,37 +85,26 @@ pub fn RunSimulation(nSims: usize) !ArrayList([]const u8) {
             }
         }
     }
-    for(0..20)|i|{
+    for (0..teamData.GetTeamCount()) |i| {
         Q2Allocator.destroy(simData.shotDists.items[i]);
         Q2Allocator.destroy(simData.targetDists.items[i]);
     }
-  
-    var sortedPointsCount = ArrayList(i32).init(Q2Allocator);
-    var sortedTeams = ArrayList([] const u8).init(Q2Allocator);
+
+    var sortedTeams = ArrayList(TeamSort).init(Q2Allocator);
     for (0..teamData.GetTeamCount()) |i| {
-       try sortedPointsCount.append(PointsCount[i]);
+        try sortedTeams.append(TeamSort{ .name = teamData.GetTeamName(i), .value = PointsCount[i] });
     }
-    std.debug.print("{any}",.{sortedPointsCount.items});
-    std.mem.sort(i32, sortedPointsCount.items, {},  comptime std.sort.desc(i32));
-    std.debug.print("{any}",.{sortedPointsCount.items});
-    for (0..teamData.GetTeamCount()) |i| {
-        for (i..teamData.GetTeamCount()) |j| {
-            const constSortedTeams: [][] const u8 = sortedTeams.items;
-            // const a: [][] const u8 = &[_][]const u8{ teamData.GetTeamName(j) };
-            // const a: [][]const u8 = &[_][]const u8{ teamData.GetTeamName(j) };
-            const a: [][]const u8 = &[_][]const u8{ teamData.GetTeamName(j) }[0..];
-            if (sortedPointsCount.items[i] == PointsCount[j] and std.mem.containsAtLeast( []const u8, constSortedTeams, 1, a ) == false ) {
-                try sortedTeams.append(teamData.GetTeamName(j));
-               break;   
-            }
-        }
+    std.debug.print("{any}\n", .{sortedTeams.items});
+    std.sort.insertion(TeamSort, sortedTeams.items, {}, sort_team);
+    std.debug.print("{any}\n", .{sortedTeams.items});
+    std.debug.print("works?{d}\n", .{sortedTeams.items.len});
+
+    var teams = ArrayList([]const u8).init(Q2Allocator);
+    for (sortedTeams.items) |team| {
+        try teams.append(team.name);
     }
 
-    return sortedTeams;
-    // For every team matchup run the SimulateGame function
-    // Based on the GameSimResult start incrementing scores
-
-    // Return the winners of the function in whatever way you feel fits best
+    return teams;
 }
 
 pub fn CalculatePreSim() !SimDists {
@@ -120,25 +114,20 @@ pub fn CalculatePreSim() !SimDists {
         const deinit_status = gpa.deinit();
         if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
     }
- 
+
     const Q2Allocator = std.heap.page_allocator;
-    var simData: SimDists = SimDists{
-         .shotDists = ArrayList(*dists.Distribution).init(Q2Allocator),
-         .targetDists= ArrayList(*dists.Distribution).init(Q2Allocator)
-    };
+    var simData: SimDists = SimDists{ .shotDists = ArrayList(*dists.Distribution).init(Q2Allocator), .targetDists = ArrayList(*dists.Distribution).init(Q2Allocator) };
     // Given a hardcoded dist type assignment for each stat. Create dist lists based on team data
     for (0..teamData.GetTeamCount()) |x| {
         const shotCount: f64 = @floatFromInt(teamData.GetShotCount(x));
         const targetsCount: f64 = @floatFromInt(teamData.GetShotsOnTargetCount(x));
         const shotsMean: f64 = shotCount / gamesPlayed;
         const targetsMean: f64 = targetsCount / gamesPlayed;
-        const stdDev: f64 = 2;
+        const stdDev: f64 = 1;
 
-        
         try simData.shotDists.append(try dists.CreateNormalDist(shotsMean, stdDev, Q2Allocator));
         try simData.targetDists.append(try dists.CreateNormalDist(targetsMean, stdDev, Q2Allocator));
     }
-
 
     return simData;
     // Based on ShotDistType, TargetDistType, etc make and store a Distribution struct of the correct type for every team for every stat
@@ -149,7 +138,7 @@ pub fn CalculatePreSim() !SimDists {
 
 pub fn GetGoalsScored(shotsTaken: f64, shotOnTargetPercentage: f64, opponentSavePercentage: f64) i32 {
     var goals: i32 = 0;
-    const shotsTakenLoop :usize = @intFromFloat(shotsTaken);
+    const shotsTakenLoop: usize = @intFromFloat(shotsTaken);
     for (0..shotsTakenLoop) |_| {
         if (dists.RandSuccessChance(shotOnTargetPercentage)) {
             if (dists.RandSuccessChance(opponentSavePercentage)) {
@@ -185,9 +174,6 @@ pub fn SimulateGame(teamAIndex: usize, teamBIndex: usize, simData: SimDists) Gam
     if (teamAGoals < teamBGoals) {
         return GameSimResult.TEAM_B_WINS;
     }
-  
-    return GameSimResult.DRAW;
-    
-   
 
+    return GameSimResult.DRAW;
 }
