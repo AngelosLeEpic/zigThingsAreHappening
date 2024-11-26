@@ -84,18 +84,24 @@ pub fn RunSimulation(nSims: usize) !ArrayList([]const u8) {
         Q2Allocator.destroy(simData.shotDists.items[i]);
         Q2Allocator.destroy(simData.targetDists.items[i]);
     }
-       
+  
     var sortedPointsCount = ArrayList(i32).init(Q2Allocator);
     var sortedTeams = ArrayList([] const u8).init(Q2Allocator);
     for (0..teamData.GetTeamCount()) |i| {
        try sortedPointsCount.append(PointsCount[i]);
     }
-    sort(sortedPointsCount.items, 1, 20);
+    std.debug.print("{any}",.{sortedPointsCount.items});
+    std.mem.sort(i32, sortedPointsCount.items, {},  comptime std.sort.desc(i32));
+    std.debug.print("{any}",.{sortedPointsCount.items});
     for (0..teamData.GetTeamCount()) |i| {
         for (i..teamData.GetTeamCount()) |j| {
-            if (sortedPointsCount.items[i] == PointsCount[j]) {
+            const constSortedTeams: [][] const u8 = sortedTeams.items;
+            // const a: [][] const u8 = &[_][]const u8{ teamData.GetTeamName(j) };
+            // const a: [][]const u8 = &[_][]const u8{ teamData.GetTeamName(j) };
+            const a: [][]const u8 = &[_][]const u8{ teamData.GetTeamName(j) }[0..];
+            if (sortedPointsCount.items[i] == PointsCount[j] and std.mem.containsAtLeast( []const u8, constSortedTeams, 1, a ) == false ) {
                 try sortedTeams.append(teamData.GetTeamName(j));
-               break;
+               break;   
             }
         }
     }
@@ -114,7 +120,7 @@ pub fn CalculatePreSim() !SimDists {
         const deinit_status = gpa.deinit();
         if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
     }
-    const allocator = gpa.allocator();
+ 
     const Q2Allocator = std.heap.page_allocator;
     var simData: SimDists = SimDists{
          .shotDists = ArrayList(*dists.Distribution).init(Q2Allocator),
@@ -129,9 +135,10 @@ pub fn CalculatePreSim() !SimDists {
         const stdDev: f64 = 2;
 
         
-        try simData.shotDists.append(try dists.CreateNormalDist(shotsMean, stdDev, allocator));
-        try simData.targetDists.append(try dists.CreateNormalDist(targetsMean, stdDev, allocator));
+        try simData.shotDists.append(try dists.CreateNormalDist(shotsMean, stdDev, Q2Allocator));
+        try simData.targetDists.append(try dists.CreateNormalDist(targetsMean, stdDev, Q2Allocator));
     }
+
 
     return simData;
     // Based on ShotDistType, TargetDistType, etc make and store a Distribution struct of the correct type for every team for every stat
