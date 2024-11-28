@@ -145,3 +145,7 @@ pub fn GetRandFromPoissonDistributionWithSeed(lambda: f64, seed: u64) f64 {
 pub fn ConvertRandToPoissonDistribution(lambda: f64, randVal: u64) f64 {
     return -math.log(f64, 10, randVal) / lambda;
 }
+
+pub fn RandSuccessChance(chance: f64) bool {
+    return global.GetTrueRandomF64Norm() <= chance;
+}
