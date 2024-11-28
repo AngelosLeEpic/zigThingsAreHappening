@@ -7,6 +7,9 @@ const dist = @import("distributions.zig");
 const global = @import("global.zig");
 const teamData = @import("teamData.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
+const zandas = @import("zandas.zig");
+const zandasdev = @import("zandasdev.zig");
+const plot = @import("plot.zig");
 const ArrayList = std.ArrayList;
 const os = std.os;
 
@@ -20,6 +23,8 @@ pub fn main() !void {
 
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     const count: usize = args.len;
+
+    try zandasdev.testing();
 
     if (count <= 1) {
         std.debug.print("Not enough args to run any function\n", .{});
@@ -72,7 +77,7 @@ fn Test_GetRandFromNormalDistribution() !void {
     const writer = file.writer();
     try writer.print("Index,Value\n", .{});
 
-    const MAX_RUNS: c_int = 10000;
+    const MAX_RUNS: c_int = 10_000;
     for (0..MAX_RUNS) |i| {
         if (global.DEBUG_PRINT)
             std.debug.print("px={},py={}\n", .{ p.x, p.y });
@@ -93,7 +98,7 @@ fn Test_GetRandFromNormalDistribution() !void {
 fn Test_Q1() !void {
     const Q1Allocator = std.heap.page_allocator;
     var Results: ArrayList(Q1.Q1Results) = ArrayList(Q1.Q1Results).init(Q1Allocator);
-    const TestDensity: u32 = 1000;
+    const TestDensity: u32 = 1_000_000;
     const N: u32 = 100;
     const StdDev: f64 = 2.3;
 
@@ -131,7 +136,7 @@ fn Test_Poisson() !void {
     const writer = file.writer();
     try writer.print("Val1,Val2\n", .{});
 
-    const MAX_RUNS: c_int = 10000;
+    const MAX_RUNS: usize = 1_000_000;
     for (0..MAX_RUNS) |i| {
         const poisson1 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
         const poisson2 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
@@ -153,7 +158,7 @@ pub fn Test_DistributionsClasses() !void {
     const writer = file.writer();
     try writer.print("Value1,Value2\n", .{});
 
-    const MAX_RUNS: c_int = 1000;
+    const MAX_RUNS: usize = 1_000_000;
 
     var allocator = std.heap.page_allocator;
 
@@ -180,9 +185,6 @@ pub fn Test_TeamData() void {
 }
 
 pub fn create_graph_from_csv(test_name: []const u8, output_file: []const u8) !void {
-    const zandas = @import("zandas.zig");
-    const plot = @import("plot.zig");
-
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
         const deinit_status = gpa.deinit();

@@ -1,4 +1,5 @@
 const std = @import("std");
+const dev = @import("zandasdev.zig");
 const ArrayList = std.ArrayList;
 
 const DataframeErrors = error{
@@ -68,7 +69,7 @@ pub fn Dataframe(comptime T: type) type {
 
 pub fn csv_to_df(comptime T: type, csv_filename: []const u8, allocator: std.mem.Allocator) !Dataframe(T) {
     const fs = std.fs.cwd();
-    const file = try fs.readFileAlloc(allocator, csv_filename, 1024 * 1024);
+    const file = try fs.readFileAlloc(allocator, csv_filename, 1024 * 1024 * 1024);
     defer allocator.free(file);
     var line_iter = std.mem.tokenizeAny(u8, file, "\n");
 
