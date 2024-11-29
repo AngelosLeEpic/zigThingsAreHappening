@@ -7,6 +7,8 @@ const dist = @import("distributions.zig");
 const global = @import("global.zig");
 const teamData = @import("teamData.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
+const zandas = @import("zandas.zig");
+const plot = @import("plot.zig");
 const ArrayList = std.ArrayList;
 const os = std.os;
 const Q2 = @import("Q2_Football_Sim.zig");
@@ -22,6 +24,8 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     const count: usize = args.len;
 
+    std.log.debug("going inside testing()", .{});
+
     if (count <= 1) {
         std.debug.print("Not enough args to run any function\n", .{});
         std.debug.print("Possible tests to invoke: testPoisson, testNormal, testQ1\n", .{});
@@ -31,6 +35,12 @@ pub fn main() !void {
     if (std.mem.eql(u8, args[1], "testPoisson")) {
         std.debug.print("testing poisson distribution functionality\n", .{});
         try Test_Poisson();
+        return;
+    }
+
+    if (std.mem.eql(u8, args[1], "testPoissonPDF")) {
+        std.debug.print("Testing poisson distribution PDF functionality\n", .{});
+        try Test_Poisson_PDF();
         return;
     }
 
@@ -60,6 +70,27 @@ pub fn main() !void {
     if (std.mem.eql(u8, args[1], "testQ2")) {
         std.debug.print("Testing Q2\n", .{});
         try Q2_Test();
+    if (std.mem.eql(u8, args[1], "testNormal1D")) {
+        std.debug.print("Testing normal 1D\n", .{});
+        try Test_Normal_1D();
+        return;
+    }
+
+    if (std.mem.eql(u8, args[1], "testQuant")) {
+        std.debug.print("Testing quantisation\n", .{});
+        try Test_CSVQuantiser();
+        return;
+    }
+
+    if (std.mem.eql(u8, args[1], "testPoisson1D")) {
+        std.debug.print("Testing poisson 1D\n", .{});
+        try Test_Poisson_1D();
+        return;
+    }
+
+    if (std.mem.eql(u8, args[1], "testQuantPoisson")) {
+        std.debug.print("Testing poisson quantisation\n", .{});
+        try Test_CSVQuantiserPoisson();
         return;
     }
 
@@ -79,7 +110,7 @@ fn Test_GetRandFromNormalDistribution() !void {
     const writer = file.writer();
     try writer.print("Index,Value\n", .{});
 
-    const MAX_RUNS: c_int = 10000;
+    const MAX_RUNS: c_int = 10_000;
     for (0..MAX_RUNS) |i| {
         if (global.DEBUG_PRINT)
             std.debug.print("px={},py={}\n", .{ p.x, p.y });
@@ -100,7 +131,7 @@ fn Test_GetRandFromNormalDistribution() !void {
 fn Test_Q1() !void {
     const Q1Allocator = std.heap.page_allocator;
     var Results: ArrayList(Q1.Q1Results) = ArrayList(Q1.Q1Results).init(Q1Allocator);
-    const TestDensity: u32 = 1000;
+    const TestDensity: u32 = 1_000_000;
     const N: u32 = 100;
     const StdDev: f64 = 2.3;
 
@@ -138,7 +169,7 @@ fn Test_Poisson() !void {
     const writer = file.writer();
     try writer.print("Val1,Val2\n", .{});
 
-    const MAX_RUNS: c_int = 10000;
+    const MAX_RUNS: usize = 1_000_000;
     for (0..MAX_RUNS) |i| {
         const poisson1 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
         const poisson2 = dist.GetRandFromPoissonDistributionWithSeed(LAMBDA, rando.int(u64));
@@ -160,7 +191,7 @@ pub fn Test_DistributionsClasses() !void {
     const writer = file.writer();
     try writer.print("Value1,Value2\n", .{});
 
-    const MAX_RUNS: c_int = 1000;
+    const MAX_RUNS: usize = 1_000_000;
 
     var allocator = std.heap.page_allocator;
 
@@ -187,9 +218,6 @@ pub fn Test_TeamData() void {
 }
 
 pub fn create_graph_from_csv(test_name: []const u8, output_file: []const u8) !void {
-    const zandas = @import("zandas.zig");
-    const plot = @import("plot.zig");
-
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
         const deinit_status = gpa.deinit();
@@ -222,4 +250,100 @@ pub fn Q2_Test() !void {
         std.debug.print("{s}\n", .{string});
         // std.debug.print("{s}\n", .{" "});
     }
+
+pub fn create_stem_graph_from_csv(csv_path: []const u8, output_file: []const u8) !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer {
+        const deinit_status = gpa.deinit();
+        if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
+    }
+    const allocator = gpa.allocator();
+
+    var file_name = std.ArrayList(u8).init(allocator);
+    defer file_name.deinit();
+    try file_name.writer().print("{s}", .{csv_path});
+
+    // reading data
+    var df = try zandas.csv_to_df(f32, file_name.items, allocator);
+    defer df.deinit();
+
+    // plotting data
+
+    const x = df.get_col(0).items;
+    const y = df.get_col(1).items;
+
+    try plot.stem_plot(x, y, output_file, allocator);
+}
+
+// X - Lambda
+// Y - PoissonVal(X)
+pub fn Test_Poisson_PDF() !void {
+    const currentWD = std.fs.cwd();
+
+    const file = try currentWD.createFile("Data/TestPoissonPDF.csv", .{ .truncate = true });
+    defer file.close();
+    const writer = file.writer();
+    try writer.print("Lambda,Val\n", .{});
+
+    const LAMBDA_COUNT: i32 = 100;
+    const MAX_RUNS: i32 = 100;
+    for (1..LAMBDA_COUNT) |lambda| {
+        const lambdaF64: f64 = @floatFromInt(lambda);
+        for (0..MAX_RUNS) |_| {
+            const poisson = dist.GetRandFromPoissonDistribution(lambdaF64);
+            try writer.print("{d},{d}\n", .{ lambdaF64, poisson });
+        }
+    }
+
+    try create_graph_from_csv("TestPoissonPDF", "Data/PoissonPDF_Scatter.svg");
+}
+
+pub fn Test_Normal_1D() !void {
+    var rng = rand.DefaultPrng.init(global.GetTrueRandomU64());
+    var rando = rng.random();
+    var p = global.Point{ .x = rando.floatNorm(f64), .y = rando.floatNorm(f64) };
+
+    const currentWD = std.fs.cwd();
+
+    const file = try currentWD.createFile("Data/TestNormal1D.csv", .{ .truncate = true });
+    defer file.close();
+    const writer = file.writer();
+    try writer.print("Value\n", .{});
+
+    const MAX_RUNS: c_int = 5000;
+    for (0..MAX_RUNS) |_| {
+        p = dist.GetRandPointFromNormalDistribution(p, 0, 1);
+        try writer.print("{d}\n", .{p.x});
+        try writer.print("{d}\n", .{p.y});
+    }
+}
+
+pub fn Test_Poisson_1D() !void {
+    const LAMBDA: f64 = 5;
+
+    const currentWD = std.fs.cwd();
+
+    const file = try currentWD.createFile("Data/TestPoisson1D.csv", .{ .truncate = true });
+    defer file.close();
+    const writer = file.writer();
+    try writer.print("Val\n", .{});
+
+    const MAX_RUNS: c_int = 10000;
+    for (0..MAX_RUNS) |_| {
+        const poisson = dist.GetRandFromPoissonDistribution(LAMBDA);
+
+        try writer.print("{d}\n", .{poisson});
+    }
+}
+
+pub fn Test_CSVQuantiser() !void {
+    const quant = @import("csvQuantiser.zig");
+    try quant.QuantiseCSV("Data/TestNormal1D.csv", "Data/TestNormal1DQuant.csv", 100, -4.0, 4.0);
+    try create_stem_graph_from_csv("Data/TestNormal1DQuant.csv", "Data/Normal1DQuant.svg");
+}
+
+pub fn Test_CSVQuantiserPoisson() !void {
+    const quant = @import("csvQuantiser.zig");
+    try quant.QuantiseCSV("Data/TestPoisson1D.csv", "Data/TestPoisson1DQuant.csv", 100, 0.1, 2.0);
+    try create_stem_graph_from_csv("Data/TestPoisson1DQuant.csv", "Data/Poisson1DQuant.svg");
 }
