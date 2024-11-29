@@ -8,7 +8,6 @@ const global = @import("global.zig");
 const teamData = @import("teamData.zig");
 const Q1 = @import("Q1_Temp_Sim.zig");
 const zandas = @import("zandas.zig");
-const zandasdev = @import("zandasdev.zig");
 const plot = @import("plot.zig");
 const ArrayList = std.ArrayList;
 const os = std.os;
@@ -25,7 +24,6 @@ pub fn main() !void {
     const count: usize = args.len;
 
     std.log.debug("going inside testing()", .{});
-    try zandasdev.testing();
 
     if (count <= 1) {
         std.debug.print("Not enough args to run any function\n", .{});

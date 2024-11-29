@@ -1,111 +1,199 @@
 const std = @import("std");
-const dev = @import("zandasdev.zig");
 const ArrayList = std.ArrayList;
+const StringHashMap = std.StringHashMap;
+const eql = std.mem.eql;
+const tokenizeAny = std.mem.tokenizeAny;
+const parseFloat = std.fmt.parseFloat;
+const trim = std.mem.trim;
+const ArenaAllocator = std.heap.ArenaAllocator;
 
 const DataframeErrors = error{
     arrayLengthMismatch,
 };
 
-pub fn Dataframe(comptime T: type) type {
-    const Column = struct { name: []const u8, data: ArrayList(T) };
-    return struct {
-        allocator: std.mem.Allocator,
-        data: ArrayList(Column),
+const ColumnType = enum {
+    float,
+    bool,
+    str,
+};
 
-        const Self = @This();
+const Column = union(ColumnType) {
+    float: ArrayList(f64),
+    bool: ArrayList(bool),
+    str: ArrayList([]const u8),
+};
 
-        pub fn init(allocator: std.mem.Allocator) Self {
-            return .{
-                .allocator = allocator,
-                .data = ArrayList(Column).init(allocator),
-            };
-        }
+pub const Dataframe = struct {
+    data: StringHashMap(Column),
+    arena: *ArenaAllocator,
 
-        pub fn get(self: *Self, row: usize, col: usize) T {
-            return self.data.items[col].data.items[row];
-        }
+    const Self = @This();
 
-        pub fn deinit(self: *Self) void {
-            for (self.data.items) |col| {
-                col.data.deinit();
-            }
-            return self.data.deinit();
-        }
+    pub fn init(allocator: std.mem.Allocator) !Self {
+        const arena = try allocator.create(ArenaAllocator);
+        errdefer allocator.destroy(arena);
+        arena.* = ArenaAllocator.init(allocator);
 
-        pub fn get_row(self: *Self, row: usize) ArrayList(T) {
-            var return_row = ArrayList(T).init(self.allocator);
-            for (0..self.data.items.len) |i| {
-                try return_row.append(self.data.items[i].data.items[row]);
-            }
-            return return_row;
-        }
-
-        pub fn get_col(self: *Self, col: usize) ArrayList(T) {
-            return self.data.items[col].data;
-        }
-
-        pub fn add_row(self: *Self, array: []const T) !void {
-            if (array.len != self.data.items.len) {
-                std.debug.print("array lenght: {d}, self.data.items length: {d}\n", .{ array.len, self.data.items.len });
-                return DataframeErrors.arrayLengthMismatch;
-            }
-            for (0..self.data.items.len) |i| {
-                try self.data.items[i].data.append(array[i]);
-            }
-        }
-
-        pub fn add_col(self: *Self, array: []const T, col_name: []const u8) !void {
-            var column = ArrayList(T).init(self.allocator);
-            defer column.deinit();
-
-            try column.appendSlice(array);
-            try self.data.append(Column{
-                .name = col_name,
-                .data = ArrayList(T).init(self.allocator),
-            });
-        }
-    };
-}
-
-pub fn csv_to_df(comptime T: type, csv_filename: []const u8, allocator: std.mem.Allocator) !Dataframe(T) {
-    const fs = std.fs.cwd();
-    const file = try fs.readFileAlloc(allocator, csv_filename, 1024 * 1024 * 1024);
-    defer allocator.free(file);
-    var line_iter = std.mem.tokenizeAny(u8, file, "\n");
-
-    const col_names = line_iter.next().?;
-    var col_names_split = std.mem.tokenizeAny(u8, col_names, ",");
-
-    var row_size: usize = 0;
-    while (col_names_split.next()) |_| {
-        row_size += 1;
+        return .{
+            .arena = arena,
+            .data = StringHashMap(Column).init(arena.allocator()),
+        };
     }
 
+    pub fn deinit(self: *Self) void {
+        const allocator = self.arena.child_allocator;
+        self.arena.deinit();
+        allocator.destroy(self.arena);
+    }
+
+    pub fn idx(self: *Self, index: usize) ?*Column {
+        var iter = self.data.keyIterator();
+        var count: usize = 0;
+        while (iter.next()) |name| {
+            if (count == index) {
+                return self.data.getPtr(name.*);
+            }
+            count += 1;
+        }
+        return null;
+    }
+
+    pub fn get(self: *Self, name: []const u8) ?*Column {
+        return self.data.getPtr(name);
+    }
+
+    pub fn add(self: *Self, comptime col_type: ColumnType, name: []const u8) !void {
+        switch (col_type) {
+            .bool => {
+                try self.data.put(try self.arena.allocator().dupe(u8, name), Column{ .bool = ArrayList(bool).init(self.arena.allocator()) });
+            },
+            .float => {
+                try self.data.put(try self.arena.allocator().dupe(u8, name), Column{ .float = ArrayList(f64).init(self.arena.allocator()) });
+            },
+            .str => {
+                try self.data.put(try self.arena.allocator().dupe(u8, name), Column{ .str = ArrayList([]const u8).init(self.arena.allocator()) });
+            },
+        }
+    }
+};
+
+test "test dataframe for errors" {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    defer {
+        const deinit_status = gpa.deinit();
+        //fail test; can't try in defer as defer is executed after we return
+        if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
+    }
+    var df = try Dataframe.init(allocator);
+    defer df.deinit();
+    const f_64_array = [_]f64{ 3.5, 2.6, 8.7 };
+    const str_array = [_][]const u8{ "a", "b", "c" };
+
+    try df.add(ColumnType.float, "test_float_col");
+    try df.get("test_float_col").?.float.appendSlice(&f_64_array);
+    const float_col = df.get("test_float_col").?.float.items;
+    std.log.debug("array of f64: {any}", .{float_col});
+
+    try df.add(ColumnType.str, "test_str_col");
+    try df.get("test_str_col").?.str.appendSlice(&str_array);
+    const str_col = df.get("test_str_col").?.str.items;
+    std.log.debug("array of str: {any}", .{str_col});
+
+    var df_s = try csv_to_df("Data/database.csv", allocator);
+    defer df_s.deinit();
+
+    var iter = df_s.data.iterator();
+    while (iter.next()) |i| {
+        const val = i.value_ptr;
+        switch (val.*) {
+            .float => std.log.debug("name: {s}, vals?: {any}", .{ i.key_ptr.*, i.value_ptr.float.items }),
+            .bool => std.log.debug("name: {s}, vals?: {any}", .{ i.key_ptr.*, i.value_ptr.bool.items }),
+            .str => std.log.debug("name: {s}, vals?: {any}", .{ i.key_ptr.*, i.value_ptr.str.items }),
+        }
+    }
+}
+
+pub fn csv_to_df(filename: []const u8, allocator: std.mem.Allocator) !Dataframe {
+    const fs = std.fs.cwd();
+    const file = try fs.readFileAlloc(allocator, filename, 1024 * 1024 * 1024);
+    defer allocator.free(file);
+    var line_iter = tokenizeAny(u8, file, "\n");
+
+    var df = try Dataframe.init(allocator);
+
+    const col_names = line_iter.next().?;
+    var col_names_split = tokenizeAny(u8, col_names, ",");
+    var names = ArrayList([]const u8).init(allocator);
+    defer names.deinit();
+    while (col_names_split.next()) |name| {
+        try names.append(trim(u8, name, &[_]u8{ 13, 10 }));
+    }
+
+    var first_line_items = tokenizeAny(u8, line_iter.peek().?, ",");
+
+    for (names.items) |name| {
+        if (first_line_items.next()) |string| {
+            const trimed_string = trim(u8, string, &[_]u8{ 13, 10 });
+
+            std.log.debug("FIRST ITEM {s}", .{trimed_string});
+            if (parseFloat(f64, trimed_string)) |_| {
+                std.log.debug("making float column! the name is: {s}", .{name});
+                try df.add(ColumnType.float, name);
+            } else |_| {
+                if (eql(u8, trimed_string, "true") or eql(u8, trimed_string, "false")) {
+                    try df.add(ColumnType.bool, name);
+                    std.log.debug("making bool column! the name is: {s}", .{name});
+                } else {
+                    try df.add(ColumnType.str, name);
+                    std.log.debug("making str column! the name is: {s}", .{name});
+                }
+            }
+        } else {
+            break;
+        }
+    }
+    col_names_split.reset();
+    while (col_names_split.next()) |name| {
+        std.log.debug("column name: {s}", .{name});
+    }
     col_names_split.reset();
 
-    var df = Dataframe(T).init(allocator);
-    // var col_types = ArrayList(T).init(allocator);
-    // defer col_types.deinit();
-    //
-    var first_line_items = std.mem.tokenizeAny(u8, line_iter.next().?, ",");
-
-    while (first_line_items.next()) |first_line_iter_item| {
-        const col_name_iter_item = col_names_split.next().?;
-        try df.add_col(&[_]T{try std.fmt.parseFloat(T, first_line_iter_item)}, col_name_iter_item);
+    var keyiter = df.data.keyIterator();
+    var valiter = df.data.valueIterator();
+    while (keyiter.next()) |key| {
+        const val = valiter.next().?;
+        switch (val.*) {
+            .float => std.log.debug("name: {s}, vals?: {any}", .{ key.*, val.float.items }),
+            .bool => std.log.debug("name: {s}, vals?: {any}", .{ key.*, val.bool.items }),
+            .str => std.log.debug("name: {s}, vals?: {any}", .{ key.*, val.str.items }),
+        }
     }
 
     while (line_iter.next()) |line| {
         var line_items = std.mem.tokenizeAny(u8, line, ",");
-        var index: usize = 0;
 
-        var send_array = ArrayList(T).init(allocator);
-        defer send_array.deinit();
+        for (names.items) |name| {
+            if (line_items.next()) |string| {
+                const trimed_string = trim(u8, string, &[_]u8{ 13, 10 });
 
-        while (line_items.next()) |item| {
-            try send_array.append(try std.fmt.parseFloat(T, item));
-            index += 1;
+                var col = df.get(name).?;
+                switch (col.*) {
+                    .float => try col.float.append(try parseFloat(f64, trimed_string)),
+                    .bool => {
+                        if (eql(u8, trimed_string, "true")) {
+                            try col.bool.append(true);
+                        } else {
+                            try col.bool.append(false);
+                        }
+                    },
+                    .str => try col.str.append(try df.arena.allocator().dupe(u8, trimed_string)),
+                }
+            } else {
+                break;
+            }
         }
-        try df.add_row(send_array.items);
+        col_names_split.reset();
     }
     return df;
 }
