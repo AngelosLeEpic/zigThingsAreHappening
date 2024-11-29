@@ -11,6 +11,7 @@ const zandas = @import("zandas.zig");
 const plot = @import("plot.zig");
 const ArrayList = std.ArrayList;
 const os = std.os;
+const Q2 = @import("Q2_Football_Sim.zig");
 
 pub fn main() !void {
     global.Init();
@@ -66,6 +67,9 @@ pub fn main() !void {
         return;
     }
 
+    if (std.mem.eql(u8, args[1], "testQ2")) {
+        std.debug.print("Testing Q2\n", .{});
+        try Q2_Test();
     if (std.mem.eql(u8, args[1], "testNormal1D")) {
         std.debug.print("Testing normal 1D\n", .{});
         try Test_Normal_1D();
@@ -236,6 +240,16 @@ pub fn create_graph_from_csv(test_name: []const u8, output_file: []const u8) !vo
 
     try plot.scatter_plot(x, y, output_file, allocator);
 }
+
+pub fn Q2_Test() !void {
+    const nSims: usize = 1000;
+    const output = try Q2.RunSimulation(nSims);
+
+    for (0..20) |i| {
+        const string: []const u8 = output.items[i];
+        std.debug.print("{s}\n", .{string});
+        // std.debug.print("{s}\n", .{" "});
+    }
 
 pub fn create_stem_graph_from_csv(csv_path: []const u8, output_file: []const u8) !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

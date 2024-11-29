@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const TEAM_NAMES = [_][]const u8{ "Liverpool", "Manchester City", "Arsenal", "Aston Villa", "Brentford", "Brighton & Hove Albion", "Chelsea", "Fulham", "Newcastle United", "Nottingham Forest", "Tottenham Hotspur", "Bournemouth", "Manchester United", "West Ham United", "Everton", "Leicester City", "Crystal Palace", "Ipswich Town", "Southampton", "Wolverhampton Wanderers"};
-const SHOT_COUNTS = [_]usize{ 155, 212, 152, 136, 123, 159, 154, 172, 139, 157, 189, 167, 154, 148, 131, 113, 158, 108, 113, 115};
-const SHOTS_ON_TARGET_COUNTS = [_]usize{ 66, 74, 54, 43, 59, 52, 56, 60, 46, 57, 69, 52, 57, 49, 43, 37, 54, 33, 34, 47};
-const SAVES_COUNT = [_]usize{31, 25, 34, 27, 55, 37, 42, 34, 42, 30, 24, 45, 28, 33, 31, 43, 39, 45, 43, 38};
+const TEAM_NAMES = [_][]const u8{ "Liverpool", "Manchester City", "Arsenal", "Aston Villa", "Brentford", "Brighton", "Chelsea", "Fulham", "Newcastle", "Nottingham Forest", "Tottenham", "Bournemouth", "Manchester United", "West Ham", "Everton", "Leicester ", "Crystal Palace", "Ipswich Town", "Southampton", "Wolves" };
+const SHOT_COUNTS = [_]usize{ 155, 212, 152, 136, 123, 159, 154, 172, 139, 157, 189, 167, 154, 148, 131, 113, 158, 108, 113, 115 };
+const SHOTS_ON_TARGET_COUNTS = [_]usize{ 66, 74, 54, 43, 59, 52, 56, 60, 46, 57, 69, 52, 57, 49, 43, 37, 54, 33, 34, 47 };
+const SAVES_COUNT = [_]usize{ 31, 25, 34, 27, 55, 37, 42, 34, 42, 30, 24, 45, 28, 33, 31, 43, 39, 45, 43, 38 };
 
 var g_teamNamesHashmap: std.StringHashMap(usize) = undefined;
 var g_savePercents: []f64 = undefined;
@@ -15,7 +15,7 @@ pub fn InitData() !void {
     for (TEAM_NAMES) |name| {
         try g_teamNamesHashmap.put(name, i);
         i += 1;
-    }    
+    }
 
     g_savePercents = try std.heap.page_allocator.alloc(f64, SAVES_COUNT.len);
     for (0..SAVES_COUNT.len) |j| {
