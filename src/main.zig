@@ -24,6 +24,7 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     const count: usize = args.len;
 
+    std.log.debug("going inside testing()", .{});
     try zandasdev.testing();
 
     if (count <= 1) {
@@ -239,9 +240,6 @@ pub fn create_graph_from_csv(test_name: []const u8, output_file: []const u8) !vo
 }
 
 pub fn create_stem_graph_from_csv(csv_path: []const u8, output_file: []const u8) !void {
-    const zandas = @import("zandas.zig");
-    const plot = @import("plot.zig");
-
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
         const deinit_status = gpa.deinit();
@@ -282,7 +280,7 @@ pub fn Test_Poisson_PDF() !void {
         for (0..MAX_RUNS) |_| {
             const poisson = dist.GetRandFromPoissonDistribution(lambdaF64);
             try writer.print("{d},{d}\n", .{ lambdaF64, poisson });
-        }        
+        }
     }
 
     try create_graph_from_csv("TestPoissonPDF", "Data/PoissonPDF_Scatter.svg");
@@ -303,8 +301,8 @@ pub fn Test_Normal_1D() !void {
     const MAX_RUNS: c_int = 5000;
     for (0..MAX_RUNS) |_| {
         p = dist.GetRandPointFromNormalDistribution(p, 0, 1);
-        try writer.print("{d}\n", .{ p.x });
-        try writer.print("{d}\n", .{ p.y });
+        try writer.print("{d}\n", .{p.x});
+        try writer.print("{d}\n", .{p.y});
     }
 }
 
@@ -322,7 +320,7 @@ pub fn Test_Poisson_1D() !void {
     for (0..MAX_RUNS) |_| {
         const poisson = dist.GetRandFromPoissonDistribution(LAMBDA);
 
-        try writer.print("{d}\n", .{ poisson });
+        try writer.print("{d}\n", .{poisson});
     }
 }
 
