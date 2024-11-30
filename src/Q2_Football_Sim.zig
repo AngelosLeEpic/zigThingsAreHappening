@@ -6,7 +6,6 @@ const StringHashMap = std.StringHashMap;
 
 const utils = @import("main.zig");
 const dists = @import("distributions.zig");
-const teamData: type = @import("teamData.zig");
 const zandas = @import("zandas.zig");
 const Dataframe = zandas.Dataframe;
 const ItemType = zandas.ItemType;
