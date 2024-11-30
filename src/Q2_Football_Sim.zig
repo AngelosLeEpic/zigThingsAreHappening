@@ -2,21 +2,25 @@ const std = @import("std");
 const math = std.math;
 const rand = std.Random;
 const ArrayList = std.ArrayList;
+const StringHashMap = std.StringHashMap;
 
 const utils = @import("main.zig");
 const dists = @import("distributions.zig");
 const teamData: type = @import("teamData.zig");
+const zandas = @import("zandas.zig");
+const Dataframe = zandas.Dataframe;
+const ItemType = zandas.ItemType;
 const print = std.debug.print;
+const ArenaAllocator = std.heap.ArenaAllocator;
 
-const MaxShots: i32 = 40;
-const MinShots: i32 = 0;
+const Maxshots_: i32 = 40;
+const Minshots_: i32 = 0;
 
-const ShotDistType = dists.DistributionType.NORMAL;
+const shot_DistType = dists.DistributionType.NORMAL;
 const TargetDistType = dists.DistributionType.NORMAL;
 const SavePercentType = dists.DistributionType.NORMAL;
 
 const GameSimResult = enum { TEAM_A_WINS, TEAM_B_WINS, DRAW };
-var PointsCount = [_]i32{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 const TeamSort = struct {
     name: []const u8,
@@ -25,123 +29,98 @@ const TeamSort = struct {
 
 pub fn sort_team(context: void, a: TeamSort, b: TeamSort) bool {
     _ = context;
-    return a.value < b.value;
+    return a.value > b.value;
 }
 
 const SimDists = struct {
-    shotDists: ArrayList(*dists.Distribution),
-    targetDists: ArrayList(*dists.Distribution),
+    shotDists: StringHashMap(*dists.Distribution),
+    targetDists: StringHashMap(*dists.Distribution),
 };
 
-///References: https://en.wikipedia.org/wiki/Quicksort
-pub fn sort(A: []i32, lo: usize, hi: usize) void {
-    if (lo < hi) {
-        const p = partition(A, lo, hi);
-        sort(A, lo, @min(p, p -% 1));
-        sort(A, p + 1, hi);
-    }
-}
+pub fn run_simulation(filename: []const u8, allocator: std.mem.Allocator, n_sims: usize) !ArrayList([]const u8) {
+    var df = try zandas.csv_to_df(filename, allocator);
+    defer df.deinit();
 
-pub fn partition(A: []i32, lo: usize, hi: usize) usize {
-    //Pivot can be chosen otherwise, for example try picking the first or random
-    //and check in which way that affects the performance of the sorting
-    const pivot = A[hi];
-    var i = lo;
-    var j = lo;
-    while (j < hi) : (j += 1) {
-        if (A[j] < pivot) {
-            std.mem.swap(i32, &A[i], &A[j]);
-            i = i + 1;
-        }
-    }
-    std.mem.swap(i32, &A[i], &A[hi]);
-    return i;
-}
+    var arena = ArenaAllocator.init(allocator);
+    defer arena.deinit();
 
-pub fn RunSimulation(nSims: usize) !ArrayList([]const u8) {
+    var points_count = StringHashMap(i32).init(arena.allocator());
+    defer points_count.deinit();
+
+    for (df.get("Squad").?.str.items) |team| {
+        try points_count.put(try arena.allocator().dupe(u8, team), 0);
+    }
+
     // Run the presim to generate distributions
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer {
-        const deinit_status = gpa.deinit();
-        if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
-    }
-
-    const Q2Allocator = std.heap.page_allocator;
-    var simData: SimDists = SimDists{ .shotDists = ArrayList(*dists.Distribution).init(Q2Allocator), .targetDists = ArrayList(*dists.Distribution).init(Q2Allocator) };
-
-    simData = try CalculatePreSim();
-    for (0..nSims) |_| {
-        for (0..teamData.GetTeamCount()) |TeamA| {
-            for (0..teamData.GetTeamCount()) |TeamB| {
-                const result: GameSimResult = SimulateGame(TeamA, TeamB, simData);
+    const sim_data = try calculate_pre_sim(&df, arena.allocator());
+    for (0..n_sims) |_| {
+        for (df.get("Squad").?.str.items) |team_a| {
+            for (df.get("Squad").?.str.items) |team_b| {
+                const result: GameSimResult = simulate_game(&df, team_a, team_b, sim_data);
                 if (result == GameSimResult.TEAM_A_WINS) {
-                    PointsCount[TeamA] += 3;
+                    points_count.getPtr(team_a).?.* += @as(i32, 3);
                 } else if (result == GameSimResult.TEAM_B_WINS) {
-                    PointsCount[TeamB] += 3;
+                    points_count.getPtr(team_b).?.* += @as(i32, 3);
                 } else if (result == GameSimResult.DRAW) {
-                    PointsCount[TeamA] += 1;
-                    PointsCount[TeamB] += 1;
+                    points_count.getPtr(team_a).?.* += @as(i32, 1);
+                    points_count.getPtr(team_b).?.* += @as(i32, 1);
                 }
             }
         }
     }
-    for (0..teamData.GetTeamCount()) |i| {
-        Q2Allocator.destroy(simData.shotDists.items[i]);
-        Q2Allocator.destroy(simData.targetDists.items[i]);
-    }
+    var sorted_teams = ArrayList(TeamSort).init(arena.allocator());
 
-    var sortedTeams = ArrayList(TeamSort).init(Q2Allocator);
-    for (0..teamData.GetTeamCount()) |i| {
-        try sortedTeams.append(TeamSort{ .name = teamData.GetTeamName(i), .value = PointsCount[i] });
+    std.log.debug("Teams with ranking values:", .{});
+    for (df.get("Squad").?.str.items) |team| {
+        try sorted_teams.append(TeamSort{ .name = team, .value = points_count.get(team).? });
+        std.log.debug("name = {s}, val = {d}", .{ team, points_count.get(team).? });
     }
-    std.debug.print("{any}\n", .{sortedTeams.items});
-    std.sort.insertion(TeamSort, sortedTeams.items, {}, sort_team);
-    std.debug.print("{any}\n", .{sortedTeams.items});
-    std.debug.print("works?{d}\n", .{sortedTeams.items.len});
+    std.sort.insertion(TeamSort, sorted_teams.items, {}, sort_team);
 
-    var teams = ArrayList([]const u8).init(Q2Allocator);
-    for (sortedTeams.items) |team| {
-        try teams.append(team.name);
+    var teams = ArrayList([]const u8).init(allocator);
+    for (sorted_teams.items) |team| {
+        try teams.append(try allocator.dupe(u8, team.name));
     }
 
     return teams;
 }
 
-pub fn CalculatePreSim() !SimDists {
-    const gamesPlayed: f64 = 12;
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer {
-        const deinit_status = gpa.deinit();
-        if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
-    }
-
-    const Q2Allocator = std.heap.page_allocator;
-    var simData: SimDists = SimDists{ .shotDists = ArrayList(*dists.Distribution).init(Q2Allocator), .targetDists = ArrayList(*dists.Distribution).init(Q2Allocator) };
+pub fn calculate_pre_sim(df: *Dataframe, allocator: std.mem.Allocator) !SimDists {
+    const games_played: f32 = 12;
+    var sim_data = SimDists{ .shotDists = StringHashMap(*dists.Distribution).init(allocator), .targetDists = StringHashMap(*dists.Distribution).init(allocator) };
     // Given a hardcoded dist type assignment for each stat. Create dist lists based on team data
-    for (0..teamData.GetTeamCount()) |x| {
-        const shotCount: f64 = @floatFromInt(teamData.GetShotCount(x));
-        const targetsCount: f64 = @floatFromInt(teamData.GetShotsOnTargetCount(x));
-        const shotsMean: f64 = shotCount / gamesPlayed;
-        const targetsMean: f64 = targetsCount / gamesPlayed;
-        const stdDev: f64 = 1;
+    for (df.get("Squad").?.str.items, 0..) |team, index| {
+        const shot_count: f32 = df.get("Shots Taken").?.float.items[index];
+        const targets_count: f32 = df.get("Shots On Target").?.float.items[index];
+        const shots_mean: f32 = shot_count / games_played;
+        const targets_mean: f32 = targets_count / games_played;
+        const std_dev: f32 = 1;
 
-        try simData.shotDists.append(try dists.CreateNormalDist(shotsMean, stdDev, Q2Allocator));
-        try simData.targetDists.append(try dists.CreateNormalDist(targetsMean, stdDev, Q2Allocator));
+        try sim_data.shotDists.put(team, try dists.CreateNormalDist(shots_mean, std_dev, allocator));
+        try sim_data.targetDists.put(team, try dists.CreateNormalDist(targets_mean, std_dev, allocator));
     }
 
-    return simData;
-    // Based on ShotDistType, TargetDistType, etc make and store a Distribution struct of the correct type for every team for every stat
+    return sim_data;
+
+    // Based on shot_DistType, TargetDistType, etc make and store a Distribution struct of the correct type for every team for every stat
     // e.g. Make a "Distribution[] shotDists" of size teamCount. Use teamdata.zig!!
     // Use team index to access the array
+    //
+    // NOTE: NO DONT USE TEAMDATA.ZIG use a Dataframe!!! - Tom
 
 }
 
-pub fn GetGoalsScored(shotsTaken: f64, shotOnTargetPercentage: f64, opponentSavePercentage: f64) i32 {
+pub fn get_goals_scored(shots_taken: f32, shoton_target_percentage: f32, opponentsave_percentage: f32) i32 {
     var goals: i32 = 0;
-    const shotsTakenLoop: usize = @intFromFloat(shotsTaken);
-    for (0..shotsTakenLoop) |_| {
-        if (dists.RandSuccessChance(shotOnTargetPercentage)) {
-            if (dists.RandSuccessChance(opponentSavePercentage)) {
+    var shots_taken_loop: usize = undefined;
+    if (std.math.isInf(shots_taken) or std.math.isNan(shots_taken)) {
+        shots_taken_loop = 0;
+    } else {
+        shots_taken_loop = @intFromFloat(shots_taken);
+    }
+    for (0..shots_taken_loop) |_| {
+        if (dists.RandSuccessChance(shoton_target_percentage)) {
+            if (dists.RandSuccessChance(opponentsave_percentage)) {
                 goals += 1;
             }
         }
@@ -150,28 +129,27 @@ pub fn GetGoalsScored(shotsTaken: f64, shotOnTargetPercentage: f64, opponentSave
 }
 //Simulate a prem game through stats given,
 
-pub fn SimulateGame(teamAIndex: usize, teamBIndex: usize, simData: SimDists) GameSimResult {
+pub fn simulate_game(df: *Dataframe, team_a: []const u8, team_b: []const u8, sim_data: SimDists) GameSimResult {
     // Do as below to randomly generate values from the distributions you made in PreSim
     // Simulate the game, I think you know it better than me
-    // Return the result
-    const teamASaves: f64 = @floatFromInt(teamData.GetSavesCount(teamAIndex));
-    const teamBSaves: f64 = @floatFromInt(teamData.GetSavesCount(teamBIndex));
-    const teamAShotsTaken: f64 = simData.shotDists.items[teamAIndex].GetRandVal();
-    const teamBShotsTaken: f64 = simData.shotDists.items[teamBIndex].GetRandVal();
-    const teamAShotsOnTarget: f64 = simData.targetDists.items[teamAIndex].GetRandVal(); //Normal distributions : Clamped to the number of shots taken by team in sim (room to clamp further if wacky stats occur):
-    const teamBShotsOnTarget: f64 = simData.targetDists.items[teamBIndex].GetRandVal();
-    const teamASavePercentage: f64 = teamASaves / teamAShotsOnTarget; //Normal distributions : Clamped to -5 to +10 of the teams real life average
-    const teamBSavePercentage: f64 = teamBSaves / teamBShotsOnTarget;
-    const teamAShotOnTargetPercentage: f64 = teamAShotsOnTarget / teamAShotsTaken * 100;
-    const teamBShotOnTargetPercentage: f64 = teamBShotsOnTarget / teamBShotsTaken * 100;
+    const team_a_saves: f32 = df.get("Saves").?.float.items[df.get_index("Squad", ItemType{ .str = team_a }).?];
+    const team_b_saves: f32 = df.get("Saves").?.float.items[df.get_index("Squad", ItemType{ .str = team_b }).?];
+    const team_a_shots_taken: f32 = sim_data.shotDists.get(team_a).?.GetRandVal(); //.GetRandVal();
+    const team_b_shots_taken: f32 = sim_data.shotDists.get(team_b).?.GetRandVal();
+    const team_a_shots_on_target: f32 = sim_data.targetDists.get(team_a).?.GetRandVal(); //Normal distributions : Clamped to the number of shots taken by team in sim (room to clamp further if wacky stats occur):
+    const team_b_shots_on_target: f32 = sim_data.targetDists.get(team_b).?.GetRandVal();
+    const team_a_save_percentage: f32 = team_a_saves / team_a_shots_on_target; //Normal distributions : Clamped to -5 to +10 of the teams real life average
+    const team_b_save_percentage: f32 = team_b_saves / team_b_shots_on_target;
+    const team_a_shot_on_target_percentage: f32 = team_a_shots_on_target / team_a_shots_taken * 100;
+    const team_b_shot_on_target_percentage: f32 = team_b_shots_on_target / team_b_shots_taken * 100;
 
-    const teamAGoals: i32 = GetGoalsScored(teamAShotsTaken, teamAShotOnTargetPercentage, teamBSavePercentage);
-    const teamBGoals: i32 = GetGoalsScored(teamBShotsTaken, teamBShotOnTargetPercentage, teamASavePercentage);
+    const team_a_Goals: i32 = get_goals_scored(team_a_shots_taken, team_a_shot_on_target_percentage, team_b_save_percentage);
+    const team_b_Goals: i32 = get_goals_scored(team_b_shots_taken, team_b_shot_on_target_percentage, team_a_save_percentage);
 
-    if (teamAGoals > teamBGoals) {
+    if (team_a_Goals > team_b_Goals) {
         return GameSimResult.TEAM_A_WINS;
     }
-    if (teamAGoals < teamBGoals) {
+    if (team_a_Goals < team_b_Goals) {
         return GameSimResult.TEAM_B_WINS;
     }
 

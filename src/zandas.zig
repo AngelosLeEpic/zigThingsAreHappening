@@ -11,14 +11,20 @@ const DataframeErrors = error{
     arrayLengthMismatch,
 };
 
-const ColumnType = enum {
+pub const ColumnType = enum {
     float,
     bool,
     str,
 };
 
-const Column = union(ColumnType) {
-    float: ArrayList(f64),
+pub const ItemType = union(ColumnType) {
+    float: f32,
+    bool: bool,
+    str: []const u8,
+};
+
+pub const Column = union(ColumnType) {
+    float: ArrayList(f32),
     bool: ArrayList(bool),
     str: ArrayList([]const u8),
 };
@@ -46,16 +52,25 @@ pub const Dataframe = struct {
         allocator.destroy(self.arena);
     }
 
-    pub fn idx(self: *Self, index: usize) ?*Column {
-        var iter = self.data.keyIterator();
-        var count: usize = 0;
-        while (iter.next()) |name| {
-            if (count == index) {
-                return self.data.getPtr(name.*);
-            }
-            count += 1;
+    pub fn get_index(self: *Self, col_name: []const u8, value: ItemType) ?usize {
+        const col = self.get(col_name).?;
+        switch (col.*) {
+            .float => {
+                for (col.float.items, 0..) |item, index| {
+                    if (item == value.float) return index;
+                } else return null;
+            },
+            .bool => {
+                for (col.bool.items, 0..) |item, index| {
+                    if (item == value.bool) return index;
+                } else return null;
+            },
+            .str => {
+                for (col.str.items, 0..) |item, index| {
+                    if (std.mem.eql(u8, item, value.str)) return index;
+                } else return null;
+            },
         }
-        return null;
     }
 
     pub fn get(self: *Self, name: []const u8) ?*Column {
@@ -68,7 +83,7 @@ pub const Dataframe = struct {
                 try self.data.put(try self.arena.allocator().dupe(u8, name), Column{ .bool = ArrayList(bool).init(self.arena.allocator()) });
             },
             .float => {
-                try self.data.put(try self.arena.allocator().dupe(u8, name), Column{ .float = ArrayList(f64).init(self.arena.allocator()) });
+                try self.data.put(try self.arena.allocator().dupe(u8, name), Column{ .float = ArrayList(f32).init(self.arena.allocator()) });
             },
             .str => {
                 try self.data.put(try self.arena.allocator().dupe(u8, name), Column{ .str = ArrayList([]const u8).init(self.arena.allocator()) });
@@ -76,43 +91,6 @@ pub const Dataframe = struct {
         }
     }
 };
-
-test "test dataframe for errors" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer {
-        const deinit_status = gpa.deinit();
-        //fail test; can't try in defer as defer is executed after we return
-        if (deinit_status == .leak) std.testing.expect(false) catch @panic("TEST FAIL");
-    }
-    var df = try Dataframe.init(allocator);
-    defer df.deinit();
-    const f_64_array = [_]f64{ 3.5, 2.6, 8.7 };
-    const str_array = [_][]const u8{ "a", "b", "c" };
-
-    try df.add(ColumnType.float, "test_float_col");
-    try df.get("test_float_col").?.float.appendSlice(&f_64_array);
-    const float_col = df.get("test_float_col").?.float.items;
-    std.log.debug("array of f64: {any}", .{float_col});
-
-    try df.add(ColumnType.str, "test_str_col");
-    try df.get("test_str_col").?.str.appendSlice(&str_array);
-    const str_col = df.get("test_str_col").?.str.items;
-    std.log.debug("array of str: {any}", .{str_col});
-
-    var df_s = try csv_to_df("Data/database.csv", allocator);
-    defer df_s.deinit();
-
-    var iter = df_s.data.iterator();
-    while (iter.next()) |i| {
-        const val = i.value_ptr;
-        switch (val.*) {
-            .float => std.log.debug("name: {s}, vals?: {any}", .{ i.key_ptr.*, i.value_ptr.float.items }),
-            .bool => std.log.debug("name: {s}, vals?: {any}", .{ i.key_ptr.*, i.value_ptr.bool.items }),
-            .str => std.log.debug("name: {s}, vals?: {any}", .{ i.key_ptr.*, i.value_ptr.str.items }),
-        }
-    }
-}
 
 pub fn csv_to_df(filename: []const u8, allocator: std.mem.Allocator) !Dataframe {
     const fs = std.fs.cwd();
@@ -136,17 +114,13 @@ pub fn csv_to_df(filename: []const u8, allocator: std.mem.Allocator) !Dataframe 
         if (first_line_items.next()) |string| {
             const trimed_string = trim(u8, string, &[_]u8{ 13, 10 });
 
-            std.log.debug("FIRST ITEM {s}", .{trimed_string});
-            if (parseFloat(f64, trimed_string)) |_| {
-                std.log.debug("making float column! the name is: {s}", .{name});
+            if (parseFloat(f32, trimed_string)) |_| {
                 try df.add(ColumnType.float, name);
             } else |_| {
                 if (eql(u8, trimed_string, "true") or eql(u8, trimed_string, "false")) {
                     try df.add(ColumnType.bool, name);
-                    std.log.debug("making bool column! the name is: {s}", .{name});
                 } else {
                     try df.add(ColumnType.str, name);
-                    std.log.debug("making str column! the name is: {s}", .{name});
                 }
             }
         } else {
@@ -154,21 +128,7 @@ pub fn csv_to_df(filename: []const u8, allocator: std.mem.Allocator) !Dataframe 
         }
     }
     col_names_split.reset();
-    while (col_names_split.next()) |name| {
-        std.log.debug("column name: {s}", .{name});
-    }
     col_names_split.reset();
-
-    var keyiter = df.data.keyIterator();
-    var valiter = df.data.valueIterator();
-    while (keyiter.next()) |key| {
-        const val = valiter.next().?;
-        switch (val.*) {
-            .float => std.log.debug("name: {s}, vals?: {any}", .{ key.*, val.float.items }),
-            .bool => std.log.debug("name: {s}, vals?: {any}", .{ key.*, val.bool.items }),
-            .str => std.log.debug("name: {s}, vals?: {any}", .{ key.*, val.str.items }),
-        }
-    }
 
     while (line_iter.next()) |line| {
         var line_items = std.mem.tokenizeAny(u8, line, ",");
@@ -179,7 +139,7 @@ pub fn csv_to_df(filename: []const u8, allocator: std.mem.Allocator) !Dataframe 
 
                 var col = df.get(name).?;
                 switch (col.*) {
-                    .float => try col.float.append(try parseFloat(f64, trimed_string)),
+                    .float => try col.float.append(try parseFloat(f32, trimed_string)),
                     .bool => {
                         if (eql(u8, trimed_string, "true")) {
                             try col.bool.append(true);

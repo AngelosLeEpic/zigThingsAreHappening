@@ -8,19 +8,19 @@ pub const DistributionType = enum { NORMAL, POISSON, UNIFORM };
 
 pub const Distribution = struct {
     // NORMAL
-    m_Mean: f64 = 0.0,
-    m_StdDev: f64 = 0.0,
+    m_Mean: f32 = 0.0,
+    m_StdDev: f32 = 0.0,
 
     // POISSON
-    m_Rate: f64 = 0.0,
+    m_Rate: f32 = 0.0,
 
     // UNIFORM
-    m_IntervalMin: f64 = 0.0,
-    m_IntervalMax: f64 = 1.0,
+    m_IntervalMin: f32 = 0.0,
+    m_IntervalMax: f32 = 1.0,
 
     m_Type: DistributionType,
 
-    pub fn GetRandVal(this: *const Distribution) f64 {
+    pub fn GetRandVal(this: *const Distribution) f32 {
         if (this.m_Type == DistributionType.NORMAL)
             return GetRandFromNormalDistributionSingle(this.m_Mean, this.m_StdDev);
 
@@ -34,7 +34,7 @@ pub const Distribution = struct {
     }
 };
 
-pub fn CreateNormalDist(mean: f64, stdDev: f64, allocator: std.mem.Allocator) !*Distribution {
+pub fn CreateNormalDist(mean: f32, stdDev: f32, allocator: std.mem.Allocator) !*Distribution {
     var dist = try allocator.create(Distribution);
     dist.m_Mean = mean;
     dist.m_StdDev = stdDev;
@@ -42,14 +42,14 @@ pub fn CreateNormalDist(mean: f64, stdDev: f64, allocator: std.mem.Allocator) !*
     return dist;
 }
 
-pub fn CreatePoissonDist(rate: f64, allocator: std.mem.Allocator) !*Distribution {
+pub fn CreatePoissonDist(rate: f32, allocator: std.mem.Allocator) !*Distribution {
     var dist = try allocator.create(Distribution);
     dist.m_Rate = rate;
     dist.m_Type = DistributionType.POISSON;
     return dist;
 }
 
-pub fn CreateUniformDist(intervalMin: f64, intervalMax: f64, allocator: std.mem.Allocator) !*Distribution {
+pub fn CreateUniformDist(intervalMin: f32, intervalMax: f32, allocator: std.mem.Allocator) !*Distribution {
     var dist = try allocator.create(Distribution);
     dist.m_IntervalMin = intervalMin;
     dist.m_IntervalMax = intervalMax;
@@ -59,28 +59,28 @@ pub fn CreateUniformDist(intervalMin: f64, intervalMax: f64, allocator: std.mem.
 
 //======================================================
 
-pub fn GetRandFromUnifromDistributionSingle(min: f64, max: f64) f64 {
+pub fn GetRandFromUnifromDistributionSingle(min: f32, max: f32) f32 {
     return GetRandFromUnifromDistributionSingleWithSeed(min, max, global.GetTrueRandomU64());
 }
 
-pub fn GetRandFromUnifromDistributionSingleWithSeed(min: f64, max: f64, seed: u64) f64 {
-    const intervalRange: f64 = max - min;
+pub fn GetRandFromUnifromDistributionSingleWithSeed(min: f32, max: f32, seed: u64) f32 {
+    const intervalRange: f32 = max - min;
     var rng = rand.DefaultPrng.init(seed);
     var rando = rng.random();
 
-    const randUnif = rando.floatNorm(f64);
+    const randUnif = rando.floatNorm(f32);
     return randUnif * intervalRange + min;
 }
 
-pub fn GetRandFromNormalDistributionSingle(mean: f64, stdDev: f64) f64 {
+pub fn GetRandFromNormalDistributionSingle(mean: f32, stdDev: f32) f32 {
     return GetRandFromNormalDistributionSingleWithSeed(mean, stdDev, global.GetTrueRandomU64());
 }
 
-pub fn GetRandFromNormalDistributionSingleWithSeed(mean: f64, stdDev: f64, seed: u64) f64 {
+pub fn GetRandFromNormalDistributionSingleWithSeed(mean: f32, stdDev: f32, seed: u64) f32 {
     var rng = rand.DefaultPrng.init(seed);
     var rando = rng.random();
 
-    var p = global.Point{ .x = rando.floatNorm(f64), .y = rando.floatNorm(f64) };
+    var p = global.Point{ .x = rando.floatNorm(f32), .y = rando.floatNorm(f32) };
 
     const N = 4;
     for (0..N) |_| {
@@ -90,13 +90,13 @@ pub fn GetRandFromNormalDistributionSingleWithSeed(mean: f64, stdDev: f64, seed:
     return p.x;
 }
 
-pub fn GetRandsFromNormalDistribution(N: i64, mean: f64, stdDev: f64, seed: u64) std.ArrayList(f64) {
+pub fn GetRandsFromNormalDistribution(N: i64, mean: f32, stdDev: f32, seed: u64) std.ArrayList(f32) {
     var rng = rand.DefaultPrng.init(seed);
     var rando = rng.random();
 
-    var p = global.Point{ .x = rando.floatNorm(f64), .y = rando.floatNorm(f64) };
+    var p = global.Point{ .x = rando.floatNorm(f32), .y = rando.floatNorm(f32) };
 
-    var result: std.ArrayList(f64) = std.ArrayList(f64).init(std.testing.allocator);
+    var result: std.ArrayList(f32) = std.ArrayList(f32).init(std.testing.allocator);
 
     const Ndiv2 = N / 2;
     for (0..Ndiv2) |_| {
@@ -109,14 +109,14 @@ pub fn GetRandsFromNormalDistribution(N: i64, mean: f64, stdDev: f64, seed: u64)
 }
 
 // https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
-pub fn GetRandPointFromNormalDistribution(p: global.Point, mean: f64, stdDev: f64) global.Point {
+pub fn GetRandPointFromNormalDistribution(p: global.Point, mean: f32, stdDev: f32) global.Point {
     const xI = math.floor(p.x);
     const yI = math.floor(p.x);
 
-    const x: f64 = p.x - xI;
-    const y: f64 = p.y - yI;
+    const x: f32 = p.x - xI;
+    const y: f32 = p.y - yI;
 
-    const logVal = math.log(f64, 10, x);
+    const logVal = math.log(f32, 10, x);
     const mag = stdDev * math.sqrt(-2 * logVal);
     const z0 = mag * math.cos(math.tau * y);
     const z1 = mag * math.sin(math.tau * y);
@@ -130,20 +130,20 @@ pub fn GetRandPointFromNormalDistribution(p: global.Point, mean: f64, stdDev: f6
     };
 }
 
-pub fn GetRandFromPoissonDistribution(lambda: f64) f64 {
+pub fn GetRandFromPoissonDistribution(lambda: f32) f32 {
     return GetRandFromPoissonDistributionWithSeed(lambda, global.GetTrueRandomU64());
 }
 
-pub fn GetRandFromPoissonDistributionWithSeed(lambda: f64, seed: u64) f64 {
+pub fn GetRandFromPoissonDistributionWithSeed(lambda: f32, seed: u64) f32 {
     var rng = rand.DefaultPrng.init(seed);
     var rando = rng.random();
-    return -math.log(f64, 10, rando.float(f64)) / lambda;
+    return -math.log(f32, 10, rando.float(f32)) / lambda;
 }
 
-pub fn ConvertRandToPoissonDistribution(lambda: f64, randVal: u64) f64 {
-    return -math.log(f64, 10, randVal) / lambda;
+pub fn ConvertRandToPoissonDistribution(lambda: f32, randVal: u64) f32 {
+    return -math.log(f32, 10, randVal) / lambda;
 }
 
-pub fn RandSuccessChance(chance: f64) bool {
-    return global.GetTrueRandomF64Norm() <= chance;
+pub fn RandSuccessChance(chance: f32) bool {
+    return global.GetTrueRandomf32Norm() <= chance;
 }
