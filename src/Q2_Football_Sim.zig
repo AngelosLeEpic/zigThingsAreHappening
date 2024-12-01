@@ -55,6 +55,7 @@ pub fn run_simulation(filename: []const u8, allocator: std.mem.Allocator, n_sims
     for (0..n_sims) |_| {
         for (df.get("Squad").?.str.items) |team_a| {
             for (df.get("Squad").?.str.items) |team_b| {
+                
                 const result: GameSimResult = simulate_game(&df, team_a, team_b, sim_data);
                 if (result == GameSimResult.TEAM_A_WINS) {
                     points_count.getPtr(team_a).?.* += @as(i32, 3);
@@ -64,6 +65,7 @@ pub fn run_simulation(filename: []const u8, allocator: std.mem.Allocator, n_sims
                     points_count.getPtr(team_a).?.* += @as(i32, 1);
                     points_count.getPtr(team_b).?.* += @as(i32, 1);
                 }
+            
             }
         }
     }
@@ -93,10 +95,10 @@ pub fn calculate_pre_sim(df: *Dataframe, allocator: std.mem.Allocator) !SimDists
         const targets_count: f32 = df.get("Shots On Target").?.float.items[index];
         const shots_mean: f32 = shot_count / games_played;
         const targets_mean: f32 = targets_count / games_played;
-        const std_dev: f32 = 1;
+        const std_dev: f32 = 0.5;
 
-        try sim_data.shotDists.put(team, try dists.CreateNormalDist(shots_mean, std_dev, allocator));
-        try sim_data.targetDists.put(team, try dists.CreateNormalDist(targets_mean, std_dev, allocator));
+        try sim_data.shotDists.put(team, try dists.CreateNormalDist(shots_mean, std_dev ,allocator));
+        try sim_data.targetDists.put(team, try dists.CreatePoissonDist(targets_mean, allocator));
     }
 
     return sim_data;
@@ -116,10 +118,11 @@ pub fn get_goals_scored(shots_taken: f32, shoton_target_percentage: f32, opponen
         shots_taken_loop = 0;
     } else {
         shots_taken_loop = @intFromFloat(shots_taken);
+        
     }
     for (0..shots_taken_loop) |_| {
-        if (dists.RandSuccessChance(shoton_target_percentage)) {
-            if (dists.RandSuccessChance(opponentsave_percentage)) {
+        if (dists.RandSuccessChance(shoton_target_percentage * 1000) ) {
+            if (!dists.RandSuccessChance(opponentsave_percentage)) {
                 goals += 1;
             }
         }
@@ -131,17 +134,17 @@ pub fn get_goals_scored(shots_taken: f32, shoton_target_percentage: f32, opponen
 pub fn simulate_game(df: *Dataframe, team_a: []const u8, team_b: []const u8, sim_data: SimDists) GameSimResult {
     // Do as below to randomly generate values from the distributions you made in PreSim
     // Simulate the game, I think you know it better than me
-    const team_a_saves: f32 = df.get("Saves").?.float.items[df.get_index("Squad", ItemType{ .str = team_a }).?];
-    const team_b_saves: f32 = df.get("Saves").?.float.items[df.get_index("Squad", ItemType{ .str = team_b }).?];
     const team_a_shots_taken: f32 = sim_data.shotDists.get(team_a).?.GetRandVal(); //.GetRandVal();
     const team_b_shots_taken: f32 = sim_data.shotDists.get(team_b).?.GetRandVal();
     const team_a_shots_on_target: f32 = sim_data.targetDists.get(team_a).?.GetRandVal(); //Normal distributions : Clamped to the number of shots taken by team in sim (room to clamp further if wacky stats occur):
     const team_b_shots_on_target: f32 = sim_data.targetDists.get(team_b).?.GetRandVal();
-    const team_a_save_percentage: f32 = team_a_saves / team_a_shots_on_target; //Normal distributions : Clamped to -5 to +10 of the teams real life average
-    const team_b_save_percentage: f32 = team_b_saves / team_b_shots_on_target;
-    const team_a_shot_on_target_percentage: f32 = team_a_shots_on_target / team_a_shots_taken * 100;
-    const team_b_shot_on_target_percentage: f32 = team_b_shots_on_target / team_b_shots_taken * 100;
-
+    
+    const team_a_save_percentage: f32 = df.get("Saves(perc)").?.float.items[df.get_index("Squad", ItemType{ .str = team_a }).?] / 100;
+    const team_b_save_percentage: f32 = df.get("Saves(perc)").?.float.items[df.get_index("Squad", ItemType{ .str = team_b }).?] / 100;
+   
+    const team_a_shot_on_target_percentage: f32 = team_a_shots_on_target / team_a_shots_taken ;
+    const team_b_shot_on_target_percentage: f32 = team_b_shots_on_target / team_b_shots_taken ;
+   
     const team_a_Goals: i32 = get_goals_scored(team_a_shots_taken, team_a_shot_on_target_percentage, team_b_save_percentage);
     const team_b_Goals: i32 = get_goals_scored(team_b_shots_taken, team_b_shot_on_target_percentage, team_a_save_percentage);
 
