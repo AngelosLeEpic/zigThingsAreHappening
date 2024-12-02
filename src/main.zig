@@ -12,38 +12,38 @@ const ArrayList = std.ArrayList;
 const os = std.os;
 const Q2 = @import("Q2_Football_Sim.zig");
 
+pub const std_options = .{ .log_level = .info };
+
 pub fn main() !void {
     global.Init();
 
     if (global.IsReleaseMode()) {
-        std.debug.print("Running in Release mode\n", .{});
-    } else std.debug.print("Running in Debug mode\n", .{});
+        std.log.info("Running in Release mode", .{});
+    } else std.log.info("Running in Debug mode", .{});
 
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     const count: usize = args.len;
 
-    std.log.debug("going inside testing()", .{});
-
     if (count <= 1) {
-        std.debug.print("Not enough args to run any function\n", .{});
-        std.debug.print("Possible tests to invoke: testPoisson, testNormal, testQ1\n", .{});
+        std.log.info("Not enough args to run any function", .{});
+        std.log.info("Possible tests to invoke: testPoisson, testPoissonPDF, testPoisson1D, testQuantPoisson, testNormal, testNormal1D, testQ1, testQ2, testDistClasses, testQuant", .{});
         return;
     }
 
     if (std.mem.eql(u8, args[1], "testPoisson")) {
-        std.debug.print("testing poisson distribution functionality\n", .{});
+        std.log.info("testing poisson distribution functionality", .{});
         try Test_Poisson();
         return;
     }
 
     if (std.mem.eql(u8, args[1], "testPoissonPDF")) {
-        std.debug.print("Testing poisson distribution PDF functionality\n", .{});
+        std.log.info("Testing poisson distribution PDF functionality", .{});
         try Test_Poisson_PDF();
         return;
     }
 
     if (std.mem.eql(u8, args[1], "testNormal")) {
-        std.debug.print("testing normal distribution functinality\n", .{});
+        std.log.info("testing normal distribution functinality", .{});
         try Test_GetRandFromNormalDistribution();
         return;
     }
@@ -54,41 +54,42 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, args[1], "testDistClasses")) {
-        std.debug.print("Testing distribution classes\n", .{});
+        std.log.info("Testing distribution classes", .{});
         try Test_DistributionsClasses();
         return;
     }
 
     if (std.mem.eql(u8, args[1], "testQ2")) {
-        std.debug.print("Testing Q2\n", .{});
+        std.log.info("Testing Q2", .{});
         try Q2_Test();
+        return;
     }
 
     if (std.mem.eql(u8, args[1], "testNormal1D")) {
-        std.debug.print("Testing normal 1D\n", .{});
+        std.log.info("Testing normal 1D", .{});
         try Test_Normal_1D();
         return;
     }
 
     if (std.mem.eql(u8, args[1], "testQuant")) {
-        std.debug.print("Testing quantisation\n", .{});
+        std.log.info("Testing quantisation", .{});
         try Test_CSVQuantiser();
         return;
     }
 
     if (std.mem.eql(u8, args[1], "testPoisson1D")) {
-        std.debug.print("Testing poisson 1D\n", .{});
+        std.log.info("Testing poisson 1D", .{});
         try Test_Poisson_1D();
         return;
     }
 
     if (std.mem.eql(u8, args[1], "testQuantPoisson")) {
-        std.debug.print("Testing poisson quantisation\n", .{});
+        std.log.info("Testing poisson quantisation", .{});
         try Test_CSVQuantiserPoisson();
         return;
     }
 
-    std.debug.print("You must input desired function to test, select testPoisson, testNormal or testQ1 to test general functions \n", .{});
+    std.log.info("You must input desired function to test: testPoisson, testPoissonPDF, testPoisson1D, testQuantPoisson, testNormal, testNormal1D, testQ1, testQ2, testDistClasses, testQuant", .{});
 }
 
 fn Test_GetRandFromNormalDistribution() !void {
@@ -107,15 +108,13 @@ fn Test_GetRandFromNormalDistribution() !void {
 
     const MAX_RUNS: usize = 10_000;
     for (0..MAX_RUNS) |i| {
-        if (global.DEBUG_PRINT)
-            std.debug.print("px={},py={}\n", .{ p.x, p.y });
+        std.log.debug("px={},py={}", .{ p.x, p.y });
 
         p = dist.GetRandPointFromNormalDistribution(p, 0, 1);
 
         try writer.print("{d},{d}\n", .{ p.x, p.y });
 
-        if (global.DEBUG_PRINT)
-            std.debug.print("{x},", .{i});
+        std.log.debug("{x},", .{i});
     }
 
     try create_graph_from_csv("TestNormal", "Data/normal_scatter_plot.svg", "Index", "Value");
@@ -132,13 +131,13 @@ fn Test_Q1() !void {
         try Results.append(Q1.simulateQ1(TestDensity, StdDev));
     }
 
-    std.debug.print("tests run fine, writting results of Q1\n", .{});
+    std.log.debug("tests run fine, writting results of Q1", .{});
 
     const currentWD = std.fs.cwd();
     const file = try currentWD.createFile("Data/Q1.csv", .{ .truncate = true });
     defer file.close();
     const writer = file.writer();
-    std.debug.print("created file for writting\n", .{});
+    std.log.debug("created file for writting", .{});
 
     try writer.print("Porpotion,MaxTemp\n", .{});
 
@@ -169,8 +168,7 @@ fn Test_Poisson() !void {
 
         try writer.print("{d},{d}\n", .{ poisson1, poisson2 });
 
-        if (global.DEBUG_PRINT)
-            std.debug.print("{x},", .{i});
+        std.log.debug("{x},", .{i});
     }
 
     try create_graph_from_csv("TestPoisson", "Data/poisson_scatter_plot.svg", "Val1", "Val2");
@@ -239,9 +237,11 @@ pub fn Q2_Test() !void {
         output.deinit();
     }
 
+    const out_file = std.io.getStdOut();
     for (0..20) |i| {
-        const string: []const u8 = output.items[i];
-        std.debug.print("{s}\n", .{string});
+        const team: []const u8 = output.items[i];
+        const rank = i + 1;
+        try out_file.writer().print("Position: {d}:\t{s}\n", .{ rank, team });
     }
 }
 

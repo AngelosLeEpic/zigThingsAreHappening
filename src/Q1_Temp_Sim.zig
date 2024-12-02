@@ -36,7 +36,7 @@ pub fn simulateQ1(N: i64, deltaTime: f32) Q1Results {
         count += 1;
     }
     const finalPorpotion: f32 = @as(f32, @floatFromInt(aboveZero)) / @as(f32, @floatFromInt(N));
-    // std.debug.print("Test complete, maxTemp: {}, porpostion: {}\n", .{ maxTemp, aboveZero });
+    std.debug.print("Test complete, maxTemp: {}, porpostion: {}\n", .{ maxTemp, aboveZero });
 
     const result = Q1Results{ .porpotion = finalPorpotion, .maxTemp = maxTemp };
     return result;

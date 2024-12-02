@@ -121,8 +121,7 @@ pub fn GetRandPointFromNormalDistribution(p: global.Point, mean: f32, stdDev: f3
     const z0 = mag * math.cos(math.tau * y);
     const z1 = mag * math.sin(math.tau * y);
 
-    if (global.DEBUG_PRINT)
-        std.debug.print("RandNorm: x={d}, y={d}\n logVal={d}, mag={d}, z0={d}, z1={d}\n\n", .{ x, y, logVal, mag, z0, z1 });
+    std.log.debug("RandNorm: x={d}, y={d}\n logVal={d}, mag={d}, z0={d}, z1={d}\n", .{ x, y, logVal, mag, z0, z1 });
 
     return global.Point{
         .x = z0 + mean,
