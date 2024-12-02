@@ -77,6 +77,12 @@ pub fn main() !void {
         return;
     }
 
+    if (std.mem.eql(u8, args[1], "testQuant2D")) {
+        std.debug.print("Testing quantisation 2D\n", .{});
+        try Test_CSVQuantiser2D();
+        return;
+    }
+
     if (std.mem.eql(u8, args[1], "testPoisson1D")) {
         std.log.info("Testing poisson 1D", .{});
         try Test_Poisson_1D();
@@ -123,11 +129,12 @@ fn Test_GetRandFromNormalDistribution() !void {
 fn Test_Q1() !void {
     const Q1Allocator = std.heap.page_allocator;
     var Results: ArrayList(Q1.Q1Results) = ArrayList(Q1.Q1Results).init(Q1Allocator);
-    const TestDensity: u32 = 100_000;
-    const N: u32 = 100;
+    const TestDensity: u32 = 10000;
+    const N: u32 = 10000;
     const StdDev: f32 = 2.3;
 
-    for (0..N) |_| {
+    for (0..N) |i| {
+        std.debug.print("Running simulation {}\n", .{i});
         try Results.append(Q1.simulateQ1(TestDensity, StdDev));
     }
 
@@ -340,4 +347,11 @@ pub fn Test_CSVQuantiserPoisson() !void {
     const quant = @import("csvQuantiser.zig");
     try quant.QuantiseCSV("Data/TestPoisson1D.csv", "Data/TestPoisson1DQuant.csv", 100, 0.1, 2.0);
     try create_stem_graph_from_csv("Data/TestPoisson1DQuant.csv", "Data/Poisson1DQuant.svg", "Val", "Freq");
+}
+
+pub fn Test_CSVQuantiser2D() !void {
+    const quant = @import("csvQuantiser.zig");
+    try quant.QuantiseCSV2D("Data/Q1.csv", "Data/P_Quant.csv", "Data/TMax_Quant.csv", 1000, 0.0, 1.0, 0.0, 2000.0);
+    try create_stem_graph_from_csv("Data/P_Quant.csv", "Data/P.svg", "Val", "Freq");
+    try create_stem_graph_from_csv("Data/TMax_Quant.csv", "Data/TMax.svg", "Val", "Freq");
 }
