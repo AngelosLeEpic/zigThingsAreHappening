@@ -29,6 +29,6 @@ replace `<possible test>` with one of the following: `testPoisson`, `testPoisson
 
 ### Our Contributors ✨
 
-<a href="https://github.com/mfts/papermark/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=mfts/papermark" />
+<a href="https://github.com/AngelosLeEpic/zigThingsAreHappening/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=AngelosLeEpic/zigThingsAreHappening" />
 </a>
