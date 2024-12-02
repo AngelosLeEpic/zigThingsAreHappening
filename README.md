@@ -7,8 +7,7 @@ find how to download it at [https://ziglang.org/download/](https://ziglang.org/d
 
 First, clone this repository:
 
-<!-- start:code block -->
-
+```
 # Clone this repository
 
 git clone https://github.com/AngelosLeEpic/zigThingsAreHappening.git
@@ -18,7 +17,7 @@ cd zigThingsAreHappening
 
 zig build run -Doptimize=ReleaseFast -- <possible test>
 
-<!-- end:code block -->
+```
 
 replace `<possible test>` with one of the following: `testPoisson`, `testPoissonPDF`, `testPoisson1D`, `testQuantPoisson`, `testNormal`, `testNormal1D`, `testQ1`, `testQ2`, `testDistClasses`, `testQuant`
 
