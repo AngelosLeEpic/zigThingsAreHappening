@@ -5,7 +5,9 @@ const rand = std.Random;
 
 // TODO: RENAME THIS FILE TO UTILS
 
-pub const DEBUG_PRINT: bool = false;
+// pub const DEBUG_PRINT: bool = false;
+// there is now use of std.log so in main: pub const std_options = .{ .log_level = .info };
+// change the .info to .debug if debug logs are wanted.
 
 pub const Point = struct { x: f32, y: f32 };
 

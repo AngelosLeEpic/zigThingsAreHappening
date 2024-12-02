@@ -33,7 +33,7 @@ pub fn line_plot(x_in: []const f32, y: []const f32, file_path: []const u8, alloc
     var svg = try figure.show();
     defer svg.deinit();
 
-    std.debug.print("line_plot out\n", .{});
+    std.log.debug("line_plot out\n", .{});
 
     var file = try std.fs.cwd().createFile(file_path, .{});
     defer file.close();
@@ -58,7 +58,7 @@ pub fn scatter_plot(x_in: []const f32, y: []const f32, file_path: []const u8, al
     var svg = try figure.show();
     defer svg.deinit();
 
-    std.debug.print("scatter_plot out\n", .{});
+    std.log.debug("scatter_plot out\n", .{});
     var file = try std.fs.cwd().createFile(file_path, .{});
     defer file.close();
 
@@ -79,7 +79,7 @@ pub fn stem_plot(x_in: []const f32, y: []const f32, file_path: []const u8, alloc
     var svg = try figure.show();
     defer svg.deinit();
 
-    std.debug.print("Stem plot out\n", .{});
+    std.log.debug("Stem plot out\n", .{});
     var file = try std.fs.cwd().createFile(file_path, .{});
     defer file.close();
 
